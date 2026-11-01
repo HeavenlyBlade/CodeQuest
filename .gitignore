@@ -4,3 +4,9 @@ obj/
 *.db-shm
 *.db-wal
 .agents/
+
+# Production secrets (never commit)
+appsettings.Production.json
+
+# Local dev overrides (may contain passwords)
+appsettings.Development.json

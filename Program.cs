@@ -6,9 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Render injects PORT env var — bind Kestrel to it
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 // ---- Database ----
 builder.Services.AddDbContext<GameDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // ---- Identity ----
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
@@ -46,12 +50,20 @@ builder.Services.AddRazorComponents()
 var app = builder.Build();
 
 // ---- DB migrate + seed at startup ----
-using (var scope = app.Services.CreateScope())
+try
 {
+    using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<GameDbContext>();
     db.Database.Migrate();
     DbSeeder.Seed(db);
     await DbSeeder.SeedUsersAsync(scope.ServiceProvider);
+}
+catch (Exception ex)
+{
+    var logger = app.Services.GetRequiredService<ILogger<Program>>();
+    logger.LogError(ex, "Database migration/seeding failed. Check connection string.");
+    // Re-throw so the app fails fast with a clear error rather than serving broken pages
+    throw;
 }
 
 // ---- HTTP pipeline ----

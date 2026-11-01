@@ -1,0 +1,30 @@
+# Exclude build artifacts
+bin/
+obj/
+
+# Exclude local database
+*.db
+*.db-shm
+*.db-wal
+
+# Exclude local dev config with secrets
+appsettings.Development.json
+
+# Exclude git
+.git/
+.gitignore
+
+# Exclude VS/Rider files
+.vs/
+.vscode/
+*.user
+
+# Exclude node_modules if any
+node_modules/
+
+# Exclude kiro agent files
+.kiro/
+.agents/
+
+# Exclude test output
+TestResults/

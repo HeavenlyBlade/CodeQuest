@@ -1,0 +1,18 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploy: connect this repo in Render Dashboard > New > Blueprint
+
+services:
+  - type: web
+    name: codequest
+    runtime: docker
+    plan: free
+    region: oregon  # closest to PH is singapore but free tier only supports oregon/frankfurt
+    branch: main
+    healthCheckPath: /
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ConnectionStrings__DefaultConnection
+        sync: false   # marked sync:false = you paste the value in Render Dashboard (never committed)
+      - key: TeacherSeedPassword
+        sync: false   # same — paste in dashboard
