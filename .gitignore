@@ -4,6 +4,7 @@ obj/
 *.db-shm
 *.db-wal
 .agents/
+.env
 
 # Production secrets (never commit)
 appsettings.Production.json
