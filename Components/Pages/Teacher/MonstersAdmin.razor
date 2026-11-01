@@ -1,0 +1,204 @@
+@page "/teacher/monsters"
+@attribute [Authorize(Roles = "Teacher")]
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Manage Monsters – CodeQuest</PageTitle>
+
+<div class="panel mb-3">
+    <h2>👾 Manage Monsters</h2>
+    <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_statusMsg))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
+}
+
+<!-- Zone filter -->
+<div class="panel mb-3">
+    <label class="form-label">Filter by Zone:</label>
+    <select class="form-select" style="max-width:300px" @onchange="OnZoneChanged">
+        <option value="0">— All Zones —</option>
+        @foreach (var z in _zones)
+        {
+            <option value="@z.Id">@z.Name</option>
+        }
+    </select>
+</div>
+
+<!-- Create new monster -->
+<div class="panel mb-4">
+    <h4>Create New Monster</h4>
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select class="form-select" @bind="_newZoneId">
+                <option value="0">Select Zone</option>
+                @foreach (var z in _zones) { <option value="@z.Id">@z.Name</option> }
+            </select>
+        </div>
+        <div class="col-md-3"><input class="form-control" placeholder="Monster Name" @bind="_newName" /></div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="Order" @bind="_newOrder" /></div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="HP" @bind="_newHp" /></div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="ATK" @bind="_newAtk" /></div>
+        <div class="col-md-2">
+            <select class="form-select" @bind="_newDiff">
+                @foreach (var d in Enum.GetValues<Difficulty>()) { <option value="@d">@d</option> }
+            </select>
+        </div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="Q to defeat" @bind="_newQtd" /></div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="XP" @bind="_newXp" /></div>
+        <div class="col-md-1"><input class="form-control" type="number" placeholder="Gold" @bind="_newGold" /></div>
+        <div class="col-md-2">
+            <div class="form-check mt-2">
+                <input class="form-check-input" type="checkbox" @bind="_newIsBoss" id="newBoss" />
+                <label class="form-check-label" for="newBoss">Is Boss</label>
+            </div>
+        </div>
+        <div class="col-12">
+            <button class="btn-fantasy" @onclick="CreateMonster">Add Monster</button>
+        </div>
+    </div>
+</div>
+
+<!-- Monster list -->
+@foreach (var m in _monsters)
+{
+    <div class="panel mb-3">
+        @if (_editingId == m.Id)
+        {
+            <div class="row g-2">
+                <div class="col-md-3"><input class="form-control" @bind="_editName" placeholder="Name" /></div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editOrder" placeholder="Order" /></div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editHp" placeholder="HP" /></div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editAtk" placeholder="ATK" /></div>
+                <div class="col-md-2">
+                    <select class="form-select" @bind="_editDiff">
+                        @foreach (var d in Enum.GetValues<Difficulty>()) { <option value="@d">@d</option> }
+                    </select>
+                </div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editQtd" placeholder="Q" /></div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editXp" placeholder="XP" /></div>
+                <div class="col-md-1"><input class="form-control" type="number" @bind="_editGold" placeholder="Gold" /></div>
+                <div class="col-md-2">
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" @bind="_editIsBoss" id="editBoss_@m.Id" />
+                        <label class="form-check-label" for="editBoss_@m.Id">Is Boss</label>
+                    </div>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-success btn-sm" @onclick="() => SaveMonster(m)">Save</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>#@m.OrderNumber — @m.MonsterName @(m.IsBoss ? "👑 [BOSS]" : "")</strong>
+                    <p class="mb-0 small text-muted">
+                        HP: @m.MonsterHp | ATK: @m.MonsterAttack | @m.Difficulty |
+                        Questions: @m.QuestionsToDefeat | Reward: @m.XpReward XP, @m.GoldReward 🪙
+                    </p>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(m)">Edit</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Zone> _zones = new();
+    private List<Challenge> _monsters = new();
+    private int _filterZoneId;
+    private string _statusMsg = "";
+    private bool _isError;
+
+    // New
+    private int _newZoneId;
+    private string _newName = "";
+    private int _newOrder = 1;
+    private int _newHp = 30;
+    private int _newAtk = 10;
+    private Difficulty _newDiff = Difficulty.Easy;
+    private int _newQtd = 3;
+    private int _newXp = 10;
+    private int _newGold = 5;
+    private bool _newIsBoss;
+
+    // Edit
+    private int _editingId;
+    private string _editName = "";
+    private int _editOrder;
+    private int _editHp;
+    private int _editAtk;
+    private Difficulty _editDiff;
+    private int _editQtd;
+    private int _editXp;
+    private int _editGold;
+    private bool _editIsBoss;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
+        await LoadMonsters();
+    }
+
+    private async Task LoadMonsters()
+    {
+        var q = Db.Challenges.AsQueryable();
+        if (_filterZoneId > 0) q = q.Where(c => c.ZoneId == _filterZoneId);
+        _monsters = await q.OrderBy(c => c.ZoneId).ThenBy(c => c.OrderNumber).ToListAsync();
+    }
+
+    private async Task OnZoneChanged(ChangeEventArgs e)
+    {
+        _filterZoneId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await LoadMonsters();
+    }
+
+    private async Task CreateMonster()
+    {
+        if (_newZoneId == 0 || string.IsNullOrWhiteSpace(_newName))
+        {
+            ShowMsg("Zone and name are required.", true);
+            return;
+        }
+        Db.Challenges.Add(new Challenge
+        {
+            ZoneId = _newZoneId, MonsterName = _newName, OrderNumber = _newOrder,
+            MonsterHp = _newHp, MonsterAttack = _newAtk, Difficulty = _newDiff,
+            QuestionsToDefeat = _newQtd, XpReward = _newXp, GoldReward = _newGold, IsBoss = _newIsBoss
+        });
+        await Db.SaveChangesAsync();
+        _newName = ""; _newOrder = 1; _newHp = 30; _newAtk = 10; _newQtd = 3;
+        _newXp = 10; _newGold = 5; _newIsBoss = false;
+        await LoadMonsters();
+        ShowMsg("Monster created.");
+    }
+
+    private void StartEdit(Challenge c)
+    {
+        _editingId = c.Id; _editName = c.MonsterName; _editOrder = c.OrderNumber;
+        _editHp = c.MonsterHp; _editAtk = c.MonsterAttack; _editDiff = c.Difficulty;
+        _editQtd = c.QuestionsToDefeat; _editXp = c.XpReward; _editGold = c.GoldReward;
+        _editIsBoss = c.IsBoss;
+    }
+
+    private async Task SaveMonster(Challenge c)
+    {
+        c.MonsterName = _editName; c.OrderNumber = _editOrder; c.MonsterHp = _editHp;
+        c.MonsterAttack = _editAtk; c.Difficulty = _editDiff; c.QuestionsToDefeat = _editQtd;
+        c.XpReward = _editXp; c.GoldReward = _editGold; c.IsBoss = _editIsBoss;
+        await Db.SaveChangesAsync();
+        _editingId = 0;
+        await LoadMonsters();
+        ShowMsg("Monster updated.");
+    }
+
+    private void CancelEdit() => _editingId = 0;
+    private void ShowMsg(string msg, bool isError = false) { _statusMsg = msg; _isError = isError; }
+}

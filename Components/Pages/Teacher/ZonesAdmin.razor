@@ -1,0 +1,137 @@
+@page "/teacher/zones"
+@attribute [Authorize(Roles = "Teacher")]
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Manage Zones – CodeQuest</PageTitle>
+
+<div class="panel mb-3">
+    <h2>🗺️ Manage Zones</h2>
+    <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_statusMsg))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
+}
+
+<!-- Create new zone -->
+<div class="panel mb-4">
+    <h4>Create New Zone</h4>
+    <div class="row g-2">
+        <div class="col-md-4">
+            <input class="form-control" placeholder="Zone Name" @bind="_newName" />
+        </div>
+        <div class="col-md-4">
+            <input class="form-control" placeholder="Description" @bind="_newDesc" />
+        </div>
+        <div class="col-md-2">
+            <input class="form-control" type="number" placeholder="Order #" @bind="_newOrder" />
+        </div>
+        <div class="col-md-2">
+            <button class="btn-fantasy w-100" @onclick="CreateZone">Add Zone</button>
+        </div>
+    </div>
+</div>
+
+<!-- Zone list -->
+@foreach (var zone in _zones)
+{
+    <div class="panel mb-3">
+        @if (_editingId == zone.Id)
+        {
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input class="form-control" @bind="_editName" placeholder="Name" />
+                </div>
+                <div class="col-md-4">
+                    <input class="form-control" @bind="_editDesc" placeholder="Description" />
+                </div>
+                <div class="col-md-2">
+                    <input class="form-control" type="number" @bind="_editOrder" placeholder="Order" />
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button class="btn btn-success btn-sm" @onclick="() => SaveZone(zone)">Save</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong>#@zone.OrderNumber — @zone.Name</strong>
+                    <p class="mb-0 small text-muted">@zone.Description</p>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(zone)">Edit</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Zone> _zones = new();
+    private string _statusMsg = "";
+    private bool _isError;
+
+    // New zone form
+    private string _newName = "";
+    private string _newDesc = "";
+    private int _newOrder = 1;
+
+    // Edit
+    private int _editingId;
+    private string _editName = "";
+    private string _editDesc = "";
+    private int _editOrder;
+
+    protected override async Task OnInitializedAsync() => await LoadZones();
+
+    private async Task LoadZones()
+    {
+        _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
+    }
+
+    private async Task CreateZone()
+    {
+        if (string.IsNullOrWhiteSpace(_newName))
+        {
+            ShowMsg("Zone name is required.", true);
+            return;
+        }
+        Db.Zones.Add(new Zone { Name = _newName, Description = _newDesc, OrderNumber = _newOrder });
+        await Db.SaveChangesAsync();
+        _newName = ""; _newDesc = ""; _newOrder = 1;
+        await LoadZones();
+        ShowMsg("Zone created.");
+    }
+
+    private void StartEdit(Zone z)
+    {
+        _editingId = z.Id;
+        _editName = z.Name;
+        _editDesc = z.Description;
+        _editOrder = z.OrderNumber;
+    }
+
+    private async Task SaveZone(Zone z)
+    {
+        z.Name = _editName;
+        z.Description = _editDesc;
+        z.OrderNumber = _editOrder;
+        await Db.SaveChangesAsync();
+        _editingId = 0;
+        await LoadZones();
+        ShowMsg("Zone updated.");
+    }
+
+    private void CancelEdit() => _editingId = 0;
+
+    private void ShowMsg(string msg, bool isError = false)
+    {
+        _statusMsg = msg;
+        _isError = isError;
+    }
+}

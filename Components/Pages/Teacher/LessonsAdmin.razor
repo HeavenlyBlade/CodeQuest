@@ -1,0 +1,201 @@
+@page "/teacher/lessons"
+@attribute [Authorize(Roles = "Teacher")]
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Manage Lessons – CodeQuest</PageTitle>
+
+<div class="panel mb-3">
+    <h2>📖 Manage Lessons</h2>
+    <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_statusMsg))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
+}
+
+<!-- Zone filter -->
+<div class="panel mb-3">
+    <label class="form-label">Filter by Zone:</label>
+    <select class="form-select" style="max-width:300px" @onchange="OnZoneChanged">
+        <option value="0">— All Zones —</option>
+        @foreach (var z in _zones)
+        {
+            <option value="@z.Id">@z.Name</option>
+        }
+    </select>
+</div>
+
+<!-- Create new lesson -->
+<div class="panel mb-4">
+    <h4>Create New Lesson</h4>
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select class="form-select" @bind="_newZoneId">
+                <option value="0">Select Zone</option>
+                @foreach (var z in _zones)
+                {
+                    <option value="@z.Id">@z.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-md-3">
+            <input class="form-control" placeholder="Title" @bind="_newTitle" />
+        </div>
+        <div class="col-md-1">
+            <input class="form-control" type="number" placeholder="Order #" @bind="_newOrder" />
+        </div>
+        <div class="col-12">
+            <textarea class="form-control" rows="2" placeholder="Story" @bind="_newStory"></textarea>
+        </div>
+        <div class="col-12">
+            <textarea class="form-control" rows="3" placeholder="Explanation" @bind="_newExplanation"></textarea>
+        </div>
+        <div class="col-12">
+            <textarea class="form-control" rows="3" placeholder="Code Example" @bind="_newCode" style="font-family:monospace"></textarea>
+        </div>
+        <div class="col-12">
+            <button class="btn-fantasy" @onclick="CreateLesson">Add Lesson</button>
+        </div>
+    </div>
+</div>
+
+<!-- Lesson list -->
+@foreach (var lesson in _lessons)
+{
+    <div class="panel mb-3">
+        @if (_editingId == lesson.Id)
+        {
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input class="form-control" @bind="_editTitle" placeholder="Title" />
+                </div>
+                <div class="col-md-2">
+                    <input class="form-control" type="number" @bind="_editOrder" placeholder="Order" />
+                </div>
+                <div class="col-12">
+                    <textarea class="form-control" rows="2" @bind="_editStory" placeholder="Story"></textarea>
+                </div>
+                <div class="col-12">
+                    <textarea class="form-control" rows="3" @bind="_editExplanation" placeholder="Explanation"></textarea>
+                </div>
+                <div class="col-12">
+                    <textarea class="form-control" rows="3" @bind="_editCode" placeholder="Code Example" style="font-family:monospace"></textarea>
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button class="btn btn-success btn-sm" @onclick="() => SaveLesson(lesson)">Save</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>#@lesson.OrderNumber — @lesson.Title</strong>
+                    <p class="mb-0 small text-muted">Zone: @(_zones.FirstOrDefault(z => z.Id == lesson.ZoneId)?.Name ?? "?")</p>
+                </div>
+                <button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(lesson)">Edit</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<Zone> _zones = new();
+    private List<Lesson> _lessons = new();
+    private int _filterZoneId;
+    private string _statusMsg = "";
+    private bool _isError;
+
+    // New lesson
+    private int _newZoneId;
+    private string _newTitle = "";
+    private int _newOrder = 1;
+    private string _newStory = "";
+    private string _newExplanation = "";
+    private string _newCode = "";
+
+    // Edit
+    private int _editingId;
+    private string _editTitle = "";
+    private int _editOrder;
+    private string _editStory = "";
+    private string _editExplanation = "";
+    private string _editCode = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
+        await LoadLessons();
+    }
+
+    private async Task LoadLessons()
+    {
+        var q = Db.Lessons.AsQueryable();
+        if (_filterZoneId > 0) q = q.Where(l => l.ZoneId == _filterZoneId);
+        _lessons = await q.OrderBy(l => l.ZoneId).ThenBy(l => l.OrderNumber).ToListAsync();
+    }
+
+    private async Task OnZoneChanged(ChangeEventArgs e)
+    {
+        _filterZoneId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await LoadLessons();
+    }
+
+    private async Task CreateLesson()
+    {
+        if (_newZoneId == 0 || string.IsNullOrWhiteSpace(_newTitle))
+        {
+            ShowMsg("Zone and title are required.", true);
+            return;
+        }
+        Db.Lessons.Add(new Lesson
+        {
+            ZoneId = _newZoneId,
+            Title = _newTitle,
+            OrderNumber = _newOrder,
+            Story = _newStory,
+            Explanation = _newExplanation,
+            CodeExample = _newCode
+        });
+        await Db.SaveChangesAsync();
+        _newTitle = ""; _newStory = ""; _newExplanation = ""; _newCode = ""; _newOrder = 1;
+        await LoadLessons();
+        ShowMsg("Lesson created.");
+    }
+
+    private void StartEdit(Lesson l)
+    {
+        _editingId = l.Id;
+        _editTitle = l.Title;
+        _editOrder = l.OrderNumber;
+        _editStory = l.Story;
+        _editExplanation = l.Explanation;
+        _editCode = l.CodeExample;
+    }
+
+    private async Task SaveLesson(Lesson l)
+    {
+        l.Title = _editTitle;
+        l.OrderNumber = _editOrder;
+        l.Story = _editStory;
+        l.Explanation = _editExplanation;
+        l.CodeExample = _editCode;
+        await Db.SaveChangesAsync();
+        _editingId = 0;
+        await LoadLessons();
+        ShowMsg("Lesson updated.");
+    }
+
+    private void CancelEdit() => _editingId = 0;
+
+    private void ShowMsg(string msg, bool isError = false)
+    {
+        _statusMsg = msg;
+        _isError = isError;
+    }
+}

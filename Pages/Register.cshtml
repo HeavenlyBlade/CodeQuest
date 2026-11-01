@@ -1,0 +1,47 @@
+@page "/register"
+@model CodeQuest.Pages.RegisterModel
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register – CodeQuest</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+<div class="container d-flex justify-content-center align-items-center" style="min-height:100vh">
+    <div class="panel" style="width:100%;max-width:420px">
+        <h2 class="text-center mb-4">🧙 Create Your Hero</h2>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label">Hero Name</label>
+                <input type="text" name="HeroName" class="form-control" required maxlength="50"
+                       value="@Model.HeroName" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="Email" class="form-control" required autocomplete="username"
+                       value="@Model.Email" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password <small class="text-muted">(min 6 chars, must include a digit)</small></label>
+                <input type="password" name="Password" class="form-control" required autocomplete="new-password" />
+            </div>
+            <button type="submit" class="btn-fantasy w-100">Begin Adventure</button>
+        </form>
+
+        <p class="text-center mt-3">
+            Already a hero? <a href="/login">Login here</a>
+        </p>
+    </div>
+</div>
+</body>
+</html>

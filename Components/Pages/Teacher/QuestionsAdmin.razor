@@ -1,0 +1,227 @@
+@page "/teacher/questions"
+@attribute [Authorize(Roles = "Teacher")]
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Manage Questions – CodeQuest</PageTitle>
+
+<div class="panel mb-3">
+    <h2>❓ Manage Questions</h2>
+    <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+</div>
+
+@if (!string.IsNullOrEmpty(_statusMsg))
+{
+    <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
+}
+
+<!-- Warning banner for low question count -->
+@foreach (var warn in _warnings)
+{
+    <div class="alert alert-warning">⚠️ @warn</div>
+}
+
+<!-- Filters -->
+<div class="panel mb-3 d-flex gap-3 flex-wrap">
+    <div>
+        <label class="form-label">Zone:</label>
+        <select class="form-select" style="min-width:180px" @onchange="OnZoneChanged">
+            <option value="0">— All —</option>
+            @foreach (var z in _zones) { <option value="@z.Id">@z.Name</option> }
+        </select>
+    </div>
+    <div>
+        <label class="form-label">Difficulty:</label>
+        <select class="form-select" @onchange="OnDiffChanged">
+            <option value="">— All —</option>
+            @foreach (var d in Enum.GetValues<Difficulty>()) { <option value="@d">@d</option> }
+        </select>
+    </div>
+</div>
+
+<!-- Create new question -->
+<div class="panel mb-4">
+    <h4>Create New Question</h4>
+    <div class="row g-2">
+        <div class="col-md-3">
+            <select class="form-select" @bind="_newZoneId">
+                <option value="0">Select Zone</option>
+                @foreach (var z in _zones) { <option value="@z.Id">@z.Name</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" @bind="_newDiff">
+                @foreach (var d in Enum.GetValues<Difficulty>()) { <option value="@d">@d</option> }
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select class="form-select" @bind="_newType">
+                <option value="@ChallengeType.MultipleChoice">Multiple Choice</option>
+                <option value="@ChallengeType.PredictOutput">Predict Output</option>
+            </select>
+        </div>
+        <div class="col-12">
+            <textarea class="form-control" rows="2" placeholder="Question text" @bind="_newText"></textarea>
+        </div>
+        @if (_newType == ChallengeType.MultipleChoice)
+        {
+            <div class="col-md-3"><input class="form-control" placeholder="Choice A" @bind="_newA" /></div>
+            <div class="col-md-3"><input class="form-control" placeholder="Choice B" @bind="_newB" /></div>
+            <div class="col-md-3"><input class="form-control" placeholder="Choice C" @bind="_newC" /></div>
+            <div class="col-md-3"><input class="form-control" placeholder="Choice D" @bind="_newD" /></div>
+            <div class="col-md-3">
+                <select class="form-select" @bind="_newCorrect">
+                    <option value="">Correct answer</option>
+                    <option value="A">A</option><option value="B">B</option>
+                    <option value="C">C</option><option value="D">D</option>
+                </select>
+            </div>
+        }
+        else
+        {
+            <div class="col-md-6">
+                <input class="form-control" placeholder="Correct output (exact)" @bind="_newCorrect" />
+            </div>
+        }
+        <div class="col-12">
+            <button class="btn-fantasy" @onclick="CreateQuestion">Add Question</button>
+        </div>
+    </div>
+</div>
+
+<!-- Question list -->
+@foreach (var q in _questions)
+{
+    <div class="panel mb-2 @(q.IsActive ? "" : "locked")">
+        <div class="d-flex justify-content-between align-items-start gap-2">
+            <div style="flex:1">
+                <small class="text-muted">[@q.Difficulty | @q.Type]</small>
+                <p class="mb-1" style="white-space:pre-wrap">@q.Text</p>
+                @if (q.Type == ChallengeType.MultipleChoice)
+                {
+                    <small>A:@q.ChoiceA B:@q.ChoiceB C:@q.ChoiceC D:@q.ChoiceD → <strong>@q.CorrectAnswer</strong></small>
+                }
+                else
+                {
+                    <small>Answer: <strong>@q.CorrectAnswer</strong></small>
+                }
+            </div>
+            <div class="d-flex flex-column gap-1 align-items-end">
+                <button class="btn btn-sm @(q.IsActive ? "btn-warning" : "btn-success")"
+                        @onclick="() => ToggleActive(q)">
+                    @(q.IsActive ? "Deactivate" : "Activate")
+                </button>
+                <button class="btn btn-sm btn-danger" @onclick="() => DeleteQuestion(q)">Delete</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Zone> _zones = new();
+    private List<Challenge> _allMonsters = new();
+    private List<Question> _questions = new();
+    private List<string> _warnings = new();
+    private int _filterZoneId;
+    private string _filterDiff = "";
+    private string _statusMsg = "";
+    private bool _isError;
+
+    // New question
+    private int _newZoneId;
+    private Difficulty _newDiff = Difficulty.Easy;
+    private ChallengeType _newType = ChallengeType.MultipleChoice;
+    private string _newText = "";
+    private string _newA = "", _newB = "", _newC = "", _newD = "";
+    private string _newCorrect = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
+        _allMonsters = await Db.Challenges.ToListAsync();
+        await LoadQuestions();
+        BuildWarnings();
+    }
+
+    private async Task LoadQuestions()
+    {
+        var q = Db.Questions.AsQueryable();
+        if (_filterZoneId > 0) q = q.Where(x => x.ZoneId == _filterZoneId);
+        if (!string.IsNullOrEmpty(_filterDiff) && Enum.TryParse<Difficulty>(_filterDiff, out var d))
+            q = q.Where(x => x.Difficulty == d);
+        _questions = await q.OrderBy(x => x.ZoneId).ThenBy(x => x.Difficulty).ToListAsync();
+    }
+
+    private void BuildWarnings()
+    {
+        _warnings = new();
+        foreach (var monster in _allMonsters)
+        {
+            int activeCount = Db.Questions.Count(q =>
+                q.ZoneId == monster.ZoneId && q.Difficulty == monster.Difficulty && q.IsActive);
+            int needed = monster.QuestionsToDefeat + 3;
+            if (activeCount < needed)
+                _warnings.Add($"Zone '{_zones.FirstOrDefault(z => z.Id == monster.ZoneId)?.Name}' / " +
+                              $"{monster.Difficulty}: only {activeCount} active questions (need {needed} for '{monster.MonsterName}').");
+        }
+    }
+
+    private async Task OnZoneChanged(ChangeEventArgs e)
+    {
+        _filterZoneId = int.TryParse(e.Value?.ToString(), out var id) ? id : 0;
+        await LoadQuestions();
+    }
+
+    private async Task OnDiffChanged(ChangeEventArgs e)
+    {
+        _filterDiff = e.Value?.ToString() ?? "";
+        await LoadQuestions();
+    }
+
+    private async Task CreateQuestion()
+    {
+        if (_newZoneId == 0 || string.IsNullOrWhiteSpace(_newText) || string.IsNullOrWhiteSpace(_newCorrect))
+        {
+            ShowMsg("Zone, text, and correct answer are required.", true);
+            return;
+        }
+        Db.Questions.Add(new Question
+        {
+            ZoneId = _newZoneId, Difficulty = _newDiff, Type = _newType,
+            Text = _newText, ChoiceA = _newA, ChoiceB = _newB, ChoiceC = _newC, ChoiceD = _newD,
+            CorrectAnswer = _newCorrect, IsActive = true
+        });
+        await Db.SaveChangesAsync();
+        _newText = ""; _newA = ""; _newB = ""; _newC = ""; _newD = ""; _newCorrect = "";
+        await LoadQuestions();
+        BuildWarnings();
+        ShowMsg("Question created.");
+    }
+
+    private async Task ToggleActive(Question q)
+    {
+        q.IsActive = !q.IsActive;
+        await Db.SaveChangesAsync();
+        BuildWarnings();
+        ShowMsg(q.IsActive ? "Question activated." : "Question deactivated.");
+    }
+
+    private async Task DeleteQuestion(Question q)
+    {
+        bool hasAttempts = await Db.Attempts.AnyAsync(a => a.QuestionId == q.Id);
+        if (hasAttempts)
+        {
+            ShowMsg("Cannot delete: this question has existing attempt history. Deactivate it instead.", true);
+            return;
+        }
+        Db.Questions.Remove(q);
+        await Db.SaveChangesAsync();
+        await LoadQuestions();
+        BuildWarnings();
+        ShowMsg("Question deleted.");
+    }
+
+    private void ShowMsg(string msg, bool isError = false) { _statusMsg = msg; _isError = isError; }
+}

@@ -1,0 +1,107 @@
+@page "/map"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject GameService GameSvc
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>World Map – CodeQuest</PageTitle>
+
+@if (_loading)
+{
+    <p class="text-center mt-5">Loading your adventure...</p>
+}
+else if (_player == null)
+{
+    <p class="text-center mt-5 text-danger">Player record not found. Please re-register.</p>
+}
+else
+{
+    <div class="panel mb-4">
+        <h2>⚔️ @_player.HeroName</h2>
+        <div class="row g-2 mt-1">
+            <div class="col-md-4">
+                <small class="text-muted">Level @_player.Level</small>
+                <div class="hp-bar mt-1">
+                    <div class="hp-bar-fill" style="width:@HpPercent%"></div>
+                </div>
+                <small>HP: @_player.CurrentHp / @_player.MaxHp</small>
+            </div>
+            <div class="col-md-4">
+                <small class="text-muted">XP to next level</small>
+                <div class="hp-bar mt-1">
+                    <div class="hp-bar-fill xp-bar-fill" style="width:@XpPercent%"></div>
+                </div>
+                <small>@_player.Xp / @(_player.Level * 50) XP</small>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <span class="gold-text fs-5">🪙 @_player.Gold gold</span>
+            </div>
+        </div>
+    </div>
+
+    <h3 class="mb-3">🗺️ World Map</h3>
+
+    @if (!_zones.Any())
+    {
+        <p>No zones found. Please contact your teacher.</p>
+    }
+    else
+    {
+        <div class="row g-3">
+            @foreach (var zs in _zones)
+            {
+                <div class="col-md-6">
+                    <div class="panel @(zs.IsUnlocked ? "" : "locked")">
+                        <h4>
+                            @(zs.IsUnlocked ? "🏔️" : "🔒") @zs.Zone.Name
+                        </h4>
+                        <p class="text-muted small">@zs.Zone.Description</p>
+                        @if (zs.IsUnlocked)
+                        {
+                            <a href="/zone/@zs.Zone.Id" class="btn-fantasy">Enter Zone</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">Defeat the boss of the previous zone to unlock.</span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    <div class="mt-4">
+        <a href="/leaderboard" class="btn btn-outline-secondary">🏆 Leaderboard</a>
+        <form method="post" action="/logout" class="d-inline ms-2">
+            <input type="hidden" name="__RequestVerificationToken" value="" />
+            <button type="submit" class="btn btn-outline-danger">Logout</button>
+        </form>
+    </div>
+}
+
+@code {
+    private Player? _player;
+    private List<GameService.ZoneStatus> _zones = new();
+    private bool _loading = true;
+
+    private int HpPercent => _player == null ? 0 : (int)((double)_player.CurrentHp / _player.MaxHp * 100);
+    private int XpPercent => _player == null ? 0 : (int)((double)_player.Xp / (_player.Level * 50) * 100);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (_player != null)
+                _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
+        }
+        _loading = false;
+    }
+}

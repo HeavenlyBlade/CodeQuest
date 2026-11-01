@@ -1,0 +1,8 @@
+@inject NavigationManager Nav
+@code {
+    protected override void OnInitialized()
+    {
+        // Redirect to the SSR login page
+        Nav.NavigateTo("/login", forceLoad: true);
+    }
+}

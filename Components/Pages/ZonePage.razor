@@ -1,0 +1,128 @@
+@page "/zone/{ZoneId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject GameService GameSvc
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Zone – CodeQuest</PageTitle>
+
+@if (_loading)
+{
+    <p class="text-center mt-5">Loading zone...</p>
+}
+else if (_zone == null)
+{
+    <p class="text-danger">Zone not found.</p>
+}
+else
+{
+    <div class="panel mb-4">
+        <h2>🏔️ @_zone.Name</h2>
+        <p>@_zone.Description</p>
+        <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+    </div>
+
+    <!-- Lessons -->
+    <div class="panel mb-4">
+        <h3>📖 Lessons</h3>
+        @if (!_lessons.Any())
+        {
+            <p class="text-muted">No lessons in this zone yet.</p>
+        }
+        else
+        {
+            <ul class="list-unstyled">
+                @foreach (var lesson in _lessons)
+                {
+                    bool done = _completedLessonIds.Contains(lesson.Id);
+                    <li class="mb-2 d-flex align-items-center gap-2">
+                        <span>@(done ? "✅" : "📜")</span>
+                        <a href="/lesson/@lesson.Id">@lesson.Title</a>
+                        @if (done) { <span class="text-success small">Completed</span> }
+                    </li>
+                }
+            </ul>
+        }
+    </div>
+
+    <!-- Monsters -->
+    <div class="panel">
+        <h3>⚔️ Monsters</h3>
+        @if (!_monsters.Any())
+        {
+            <p class="text-muted">No monsters here yet.</p>
+        }
+        else
+        {
+            <div class="row g-3">
+                @foreach (var ms in _monsters)
+                {
+                    <div class="col-md-4">
+                        <div class="panel @(ms.IsUnlocked ? "" : "locked")">
+                            <h5>@(ms.Challenge.IsBoss ? "👑" : "👾") @ms.Challenge.MonsterName</h5>
+                            <p class="small">
+                                HP: @ms.Challenge.MonsterHp | ATK: @ms.Challenge.MonsterAttack<br />
+                                Difficulty: @ms.Challenge.Difficulty<br />
+                                Reward: @ms.Challenge.XpReward XP, @ms.Challenge.GoldReward 🪙
+                            </p>
+                            @if (ms.IsUnlocked)
+                            {
+                                <a href="/battle/@ms.Challenge.Id" class="btn-fantasy btn-sm">Fight!</a>
+                            }
+                            else
+                            {
+                                <span class="text-muted small">🔒 @ms.LockReason</span>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public int ZoneId { get; set; }
+
+    private Zone? _zone;
+    private List<Lesson> _lessons = new();
+    private HashSet<int> _completedLessonIds = new();
+    private List<GameService.MonsterStatus> _monsters = new();
+    private Player? _player;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+        }
+
+        _zone = await Db.Zones.FirstOrDefaultAsync(z => z.Id == ZoneId);
+        if (_zone != null)
+        {
+            _lessons = await Db.Lessons
+                .Where(l => l.ZoneId == ZoneId)
+                .OrderBy(l => l.OrderNumber)
+                .ToListAsync();
+
+            if (_player != null)
+            {
+                var progress = await Db.LessonProgresses
+                    .Where(lp => lp.PlayerId == _player.Id && _lessons.Select(l => l.Id).Contains(lp.LessonId))
+                    .ToListAsync();
+                _completedLessonIds = progress.Select(p => p.LessonId).ToHashSet();
+
+                _monsters = await GameSvc.GetMonsterStatusesAsync(ZoneId, _player.Id);
+            }
+        }
+        _loading = false;
+    }
+}

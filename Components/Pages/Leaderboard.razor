@@ -1,0 +1,65 @@
+@page "/leaderboard"
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Leaderboard – CodeQuest</PageTitle>
+
+<div class="panel">
+    <h2>🏆 Leaderboard</h2>
+    <p class="text-muted small">Top 10 heroes</p>
+
+    @if (_loading)
+    {
+        <p>Loading...</p>
+    }
+    else if (!_players.Any())
+    {
+        <p>No heroes yet. Be the first!</p>
+    }
+    else
+    {
+        <table class="table table-dark table-striped mt-3">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Hero</th>
+                    <th>Level</th>
+                    <th>XP</th>
+                    <th>Gold</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (int i = 0; i < _players.Count; i++)
+                {
+                    var p = _players[i];
+                    <tr>
+                        <td>@(i + 1)</td>
+                        <td>@p.HeroName</td>
+                        <td>@p.Level</td>
+                        <td>@p.Xp</td>
+                        <td class="gold-text">@p.Gold 🪙</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <a href="/map" class="btn btn-outline-secondary mt-3">← Back to Map</a>
+</div>
+
+@code {
+    private List<Player> _players = new();
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _players = await Db.Players
+            .OrderByDescending(p => p.Level)
+            .ThenByDescending(p => p.Xp)
+            .Take(10)
+            .ToListAsync();
+        _loading = false;
+    }
+}

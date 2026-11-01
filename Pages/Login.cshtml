@@ -1,0 +1,41 @@
+@page "/login"
+@model CodeQuest.Pages.LoginModel
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login – CodeQuest</title>
+    <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+<div class="container d-flex justify-content-center align-items-center" style="min-height:100vh">
+    <div class="panel" style="width:100%;max-width:420px">
+        <h2 class="text-center mb-4">⚔️ CodeQuest Login</h2>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger">@Model.ErrorMessage</div>
+        }
+
+        <form method="post">
+            @Html.AntiForgeryToken()
+            <div class="mb-3">
+                <label class="form-label">Email</label>
+                <input type="email" name="Email" class="form-control" required autocomplete="username" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Password</label>
+                <input type="password" name="Password" class="form-control" required autocomplete="current-password" />
+            </div>
+            <button type="submit" class="btn-fantasy w-100">Enter the Quest</button>
+        </form>
+
+        <p class="text-center mt-3">
+            No account? <a href="/register">Register here</a>
+        </p>
+    </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,161 @@
+@page "/teacher/stats"
+@attribute [Authorize(Roles = "Teacher")]
+@rendermode InteractiveServer
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Stats – CodeQuest</PageTitle>
+
+<div class="panel mb-3">
+    <h2>📊 Teaching Stats</h2>
+    <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+</div>
+
+@if (_loading)
+{
+    <p>Loading stats...</p>
+}
+else
+{
+    <!-- Per-zone accuracy -->
+    <div class="panel mb-4">
+        <h4>Per-Zone Accuracy</h4>
+        @if (!_zoneStats.Any())
+        {
+            <p class="text-muted">No attempts yet.</p>
+        }
+        else
+        {
+            <table class="table table-dark table-sm">
+                <thead><tr><th>Zone</th><th>Total Attempts</th><th>Correct</th><th>Accuracy</th></tr></thead>
+                <tbody>
+                    @foreach (var row in _zoneStats)
+                    {
+                        <tr>
+                            <td>@row.ZoneName</td>
+                            <td>@row.Total</td>
+                            <td>@row.Correct</td>
+                            <td>@row.Accuracy.ToString("P0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Per-difficulty accuracy -->
+    <div class="panel mb-4">
+        <h4>Per-Difficulty Accuracy</h4>
+        @if (!_diffStats.Any())
+        {
+            <p class="text-muted">No attempts yet.</p>
+        }
+        else
+        {
+            <table class="table table-dark table-sm">
+                <thead><tr><th>Difficulty</th><th>Total</th><th>Correct</th><th>Accuracy</th></tr></thead>
+                <tbody>
+                    @foreach (var row in _diffStats)
+                    {
+                        <tr>
+                            <td>@row.Difficulty</td>
+                            <td>@row.Total</td>
+                            <td>@row.Correct</td>
+                            <td>@row.Accuracy.ToString("P0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+    <!-- Top 10 most-missed questions -->
+    <div class="panel">
+        <h4>Top 10 Most-Missed Questions</h4>
+        @if (!_missedQuestions.Any())
+        {
+            <p class="text-muted">No wrong answers yet!</p>
+        }
+        else
+        {
+            <ol>
+                @foreach (var mq in _missedQuestions)
+                {
+                    <li class="mb-2">
+                        <strong>@mq.WrongCount wrong answers</strong><br />
+                        <span style="white-space:pre-wrap">@mq.Text</span>
+                        <br /><small class="text-muted">[@mq.Difficulty | @mq.Type]</small>
+                    </li>
+                }
+            </ol>
+        }
+    </div>
+}
+
+@code {
+    private bool _loading = true;
+    private List<ZoneStat> _zoneStats = new();
+    private List<DiffStat> _diffStats = new();
+    private List<MissedQuestion> _missedQuestions = new();
+
+    record ZoneStat(string ZoneName, int Total, int Correct, double Accuracy);
+    record DiffStat(string Difficulty, int Total, int Correct, double Accuracy);
+    record MissedQuestion(string Text, string Difficulty, string Type, int WrongCount);
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Per-zone accuracy: join attempts → questions → zones
+        var zoneAttempts = await Db.Attempts
+            .Join(Db.Questions, a => a.QuestionId, q => q.Id, (a, q) => new { a.IsCorrect, q.ZoneId })
+            .Join(Db.Zones, x => x.ZoneId, z => z.Id, (x, z) => new { x.IsCorrect, z.Name })
+            .ToListAsync();
+
+        _zoneStats = zoneAttempts
+            .GroupBy(x => x.Name)
+            .Select(g => new ZoneStat(
+                g.Key,
+                g.Count(),
+                g.Count(x => x.IsCorrect),
+                g.Count() == 0 ? 0 : (double)g.Count(x => x.IsCorrect) / g.Count()))
+            .OrderBy(x => x.ZoneName)
+            .ToList();
+
+        // Per-difficulty accuracy
+        var diffAttempts = await Db.Attempts
+            .Join(Db.Questions, a => a.QuestionId, q => q.Id, (a, q) => new { a.IsCorrect, q.Difficulty })
+            .ToListAsync();
+
+        _diffStats = diffAttempts
+            .GroupBy(x => x.Difficulty.ToString())
+            .Select(g => new DiffStat(
+                g.Key,
+                g.Count(),
+                g.Count(x => x.IsCorrect),
+                g.Count() == 0 ? 0 : (double)g.Count(x => x.IsCorrect) / g.Count()))
+            .OrderBy(x => x.Difficulty)
+            .ToList();
+
+        // Most-missed questions
+        var wrongByQuestion = await Db.Attempts
+            .Where(a => !a.IsCorrect)
+            .GroupBy(a => a.QuestionId)
+            .Select(g => new { QuestionId = g.Key, WrongCount = g.Count() })
+            .OrderByDescending(g => g.WrongCount)
+            .Take(10)
+            .ToListAsync();
+
+        var qIds = wrongByQuestion.Select(w => w.QuestionId).ToList();
+        var questions = await Db.Questions.Where(q => qIds.Contains(q.Id)).ToListAsync();
+
+        _missedQuestions = wrongByQuestion
+            .Select(w =>
+            {
+                var q = questions.First(q => q.Id == w.QuestionId);
+                return new MissedQuestion(q.Text, q.Difficulty.ToString(), q.Type.ToString(), w.WrongCount);
+            })
+            .ToList();
+
+        _loading = false;
+    }
+}

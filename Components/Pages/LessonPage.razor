@@ -1,0 +1,114 @@
+@page "/lesson/{LessonId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject GameService GameSvc
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Lesson – CodeQuest</PageTitle>
+
+@if (_loading)
+{
+    <p class="text-center mt-5">Loading lesson...</p>
+}
+else if (_lesson == null)
+{
+    <p class="text-danger">Lesson not found.</p>
+}
+else
+{
+    <div class="panel mb-3">
+        <h2>📖 @_lesson.Title</h2>
+        <a href="/zone/@_lesson.ZoneId" class="btn btn-outline-secondary btn-sm">← Back to Zone</a>
+    </div>
+
+    <!-- Story -->
+    <div class="panel mb-3">
+        <h4>📜 Story</h4>
+        <blockquote class="blockquote border-start border-3 ps-3" style="border-color:var(--color-accent) !important">
+            <p>@_lesson.Story</p>
+        </blockquote>
+    </div>
+
+    <!-- Explanation -->
+    <div class="panel mb-3">
+        <h4>🧠 Explanation</h4>
+        <p>@_lesson.Explanation</p>
+    </div>
+
+    <!-- Code Example -->
+    <div class="panel mb-3">
+        <h4>💻 Code Example</h4>
+        <pre class="code-block"><code>@_lesson.CodeExample</code></pre>
+    </div>
+
+    <!-- Actions -->
+    <div class="panel d-flex gap-3 align-items-center flex-wrap">
+        @if (_alreadyDone)
+        {
+            <span class="text-success">✅ Already completed</span>
+        }
+        else
+        {
+            <button class="btn-fantasy" @onclick="FinishLesson">
+                @(_finishing ? "Saving..." : "✔ Finish Lesson")
+            </button>
+        }
+
+        @if (_nextLesson != null)
+        {
+            <a href="/lesson/@_nextLesson.Id" class="btn btn-outline-primary">Next Lesson →</a>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(_message))
+    {
+        <div class="alert alert-success mt-3">@_message</div>
+    }
+}
+
+@code {
+    [Parameter] public int LessonId { get; set; }
+
+    private Lesson? _lesson;
+    private Lesson? _nextLesson;
+    private Player? _player;
+    private bool _alreadyDone;
+    private bool _finishing;
+    private string _message = "";
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+
+        _lesson = await Db.Lessons.FirstOrDefaultAsync(l => l.Id == LessonId);
+        if (_lesson != null && _player != null)
+        {
+            _alreadyDone = await Db.LessonProgresses
+                .AnyAsync(lp => lp.PlayerId == _player.Id && lp.LessonId == LessonId);
+
+            _nextLesson = await Db.Lessons
+                .Where(l => l.ZoneId == _lesson.ZoneId && l.OrderNumber == _lesson.OrderNumber + 1)
+                .FirstOrDefaultAsync();
+        }
+        _loading = false;
+    }
+
+    private async Task FinishLesson()
+    {
+        if (_player == null || _lesson == null || _finishing) return;
+        _finishing = true;
+        await GameSvc.FinishLessonAsync(LessonId, _player.Id);
+        _alreadyDone = true;
+        _message = "Lesson complete! Great work, hero.";
+        _finishing = false;
+    }
+}

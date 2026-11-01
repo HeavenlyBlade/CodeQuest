@@ -1,0 +1,270 @@
+@page "/battle/{ChallengeId:int}"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject GameService GameSvc
+@inject NavigationManager Nav
+@inject IHttpContextAccessor HttpContextAccessor
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Battle – CodeQuest</PageTitle>
+
+@if (_loading)
+{
+    <p class="text-center mt-5">⚔️ Preparing for battle...</p>
+}
+else if (_player == null)
+{
+    <p class="text-danger">Player not found.</p>
+}
+else if (_battle == null)
+{
+    <p class="text-danger">Battle could not start.</p>
+}
+else
+{
+    <!-- Battle status: Victory -->
+    @if (_battle.Status == BattleStatus.Won)
+    {
+        <div class="panel text-center">
+            <h2>🏆 Victory!</h2>
+            <p>You defeated <strong>@_challenge?.MonsterName</strong>!</p>
+            @if (_lastResult != null && _lastResult.XpGained > 0)
+            {
+                <p class="gold-text">
+                    +@_lastResult.XpGained XP &nbsp; +@_lastResult.GoldGained 🪙
+                </p>
+                @if (_lastResult.LeveledUp)
+                {
+                    <p class="text-success fs-5">🎉 Level Up! You are now Level @_lastResult.NewLevel!</p>
+                }
+            }
+            else
+            {
+                <p class="text-muted small">(Already beaten — no extra rewards this time)</p>
+            }
+            <a href="/zone/@(_challenge?.ZoneId)" class="btn-fantasy mt-2">Back to Zone</a>
+        </div>
+    }
+    <!-- Battle status: Defeat -->
+    else if (_battle.Status == BattleStatus.Lost)
+    {
+        <div class="panel text-center">
+            <h2>💀 Defeated!</h2>
+            @if (_noQuestions)
+            {
+                <p>No more questions available. The monster retreats... for now.</p>
+            }
+            else
+            {
+                <p>You were struck down by <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
+            }
+            <button class="btn-fantasy mt-2" @onclick="TryAgain">🔄 Try Again</button>
+            <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-2">Back to Zone</a>
+        </div>
+    }
+    <!-- Battle in progress -->
+    else
+    {
+        <!-- Monster HUD -->
+        <div class="panel mb-3">
+            <h3>👾 @_challenge?.MonsterName @(_challenge?.IsBoss == true ? "👑" : "")</h3>
+            <small class="text-muted">Monster HP</small>
+            <div class="hp-bar mt-1 mb-1">
+                <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
+            </div>
+            <small>@_battle.MonsterHpLeft / @_challenge?.MonsterHp HP</small>
+        </div>
+
+        <!-- Player HUD -->
+        <div class="panel mb-3">
+            <h5>🧙 @_player.HeroName</h5>
+            <div class="hp-bar mt-1 mb-1">
+                <div class="hp-bar-fill" style="width:@PlayerHpPercent%"></div>
+            </div>
+            <small>HP: @_player.CurrentHp / @_player.MaxHp</small>
+        </div>
+
+        <!-- Question or feedback -->
+        @if (_showFeedback && _lastResult != null)
+        {
+            <!-- Post-answer feedback -->
+            <div class="panel mb-3">
+                @if (_lastResult.IsCorrect)
+                {
+                    <p class="text-success">✅ Correct! You dealt <strong>@_lastResult.DamageToMonster damage</strong> to the monster.</p>
+                }
+                else
+                {
+                    <p class="text-danger">❌ Wrong! The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you.</p>
+                }
+                <p>The correct answer was: <strong>@_lastResult.CorrectAnswer</strong></p>
+
+                @if (_battle.Status == BattleStatus.InProgress)
+                {
+                    <button class="btn-fantasy" @onclick="LoadNextQuestion">Next Question →</button>
+                }
+            </div>
+        }
+        else if (_currentQuestion == null)
+        {
+            <div class="panel">
+                <p>No more questions available. The monster retreats!</p>
+            </div>
+        }
+        else
+        {
+            <!-- Question display -->
+            <div class="panel mb-3">
+                <h5>❓ Question</h5>
+                <p style="white-space:pre-wrap">@_currentQuestion.Text</p>
+
+                @if (_currentQuestion.Type == ChallengeType.MultipleChoice)
+                {
+                    <!-- Multiple choice radio buttons -->
+                    <div class="mt-2">
+                        @foreach (var (letter, text) in GetChoices())
+                        {
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="mcAnswer"
+                                       id="choice_@letter" value="@letter"
+                                       checked="@(_answer == letter)"
+                                       @onchange="() => _answer = letter" />
+                                <label class="form-check-label" for="choice_@letter">
+                                    <strong>@letter:</strong> @text
+                                </label>
+                            </div>
+                        }
+                    </div>
+                }
+                else if (_currentQuestion.Type == ChallengeType.PredictOutput)
+                {
+                    <!-- Predict output text input -->
+                    <div class="mt-2">
+                        <label class="form-label">Your answer (exact output):</label>
+                        <input type="text" class="form-control" style="max-width:300px"
+                               @bind="_answer" @bind:event="oninput"
+                               placeholder="Type the output..." />
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(_validationMsg))
+                {
+                    <p class="text-warning mt-2">@_validationMsg</p>
+                }
+
+                <button class="btn-fantasy mt-3" @onclick="SubmitAnswer" disabled="@_submitting">
+                    @(_submitting ? "Checking..." : "Submit Answer")
+                </button>
+            </div>
+        }
+    }
+}
+
+@code {
+    [Parameter] public int ChallengeId { get; set; }
+
+    private Player? _player;
+    private Battle? _battle;
+    private Challenge? _challenge;
+    private Question? _currentQuestion;
+    private GameService.AnswerResult? _lastResult;
+    private string _answer = "";
+    private string _validationMsg = "";
+    private bool _loading = true;
+    private bool _submitting;
+    private bool _showFeedback;
+    private bool _noQuestions;
+
+    private int MonsterHpPercent => _battle == null || _challenge == null ? 0
+        : (int)((double)_battle.MonsterHpLeft / _challenge.MonsterHp * 100);
+    private int PlayerHpPercent => _player == null ? 0
+        : (int)((double)_player.CurrentHp / _player.MaxHp * 100);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpContextAccessor.HttpContext;
+        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+
+        if (_player == null) { _loading = false; return; }
+
+        _challenge = await Db.Challenges.FindAsync(ChallengeId);
+        _battle = await GameSvc.StartOrResumeBattleAsync(ChallengeId, _player.Id);
+
+        if (_battle.Status == BattleStatus.InProgress)
+            await LoadQuestion();
+
+        _loading = false;
+    }
+
+    private async Task LoadQuestion()
+    {
+        var result = await GameSvc.GetCurrentQuestionAsync(_battle!.Id);
+        _currentQuestion = result.Question;
+        _noQuestions = result.NoQuestionsLeft;
+
+        // Refresh battle status if monster retreated
+        if (_noQuestions)
+            _battle = await Db.Battles.FindAsync(_battle!.Id) ?? _battle;
+    }
+
+    private async Task LoadNextQuestion()
+    {
+        _showFeedback = false;
+        _answer = "";
+        _validationMsg = "";
+        _lastResult = null;
+
+        // Refresh player HP
+        if (_player != null)
+            _player = await Db.Players.FindAsync(_player.Id) ?? _player;
+
+        // Refresh battle
+        _battle = await Db.Battles.FindAsync(_battle!.Id) ?? _battle;
+
+        if (_battle.Status == BattleStatus.InProgress)
+            await LoadQuestion();
+    }
+
+    private async Task SubmitAnswer()
+    {
+        if (_submitting || _player == null || _battle == null) return;
+
+        if (string.IsNullOrWhiteSpace(_answer))
+        {
+            _validationMsg = "Please select or enter an answer.";
+            return;
+        }
+        _validationMsg = "";
+        _submitting = true;
+
+        _lastResult = await GameSvc.SubmitAnswerAsync(_battle.Id, _player.Id, _answer);
+        _showFeedback = true;
+
+        // Refresh battle and player from DB for latest HP values
+        _battle = await Db.Battles.FindAsync(_battle.Id) ?? _battle;
+        _player = await Db.Players.FindAsync(_player.Id) ?? _player;
+
+        _submitting = false;
+    }
+
+    private void TryAgain()
+    {
+        // forceLoad: true creates a fresh circuit and starts a new battle
+        Nav.NavigateTo($"/battle/{ChallengeId}", forceLoad: true);
+    }
+
+    /// <summary>Returns the available choices for a multiple-choice question.</summary>
+    private IEnumerable<(string Letter, string Text)> GetChoices()
+    {
+        if (_currentQuestion == null) yield break;
+        if (_currentQuestion.ChoiceA != null) yield return ("A", _currentQuestion.ChoiceA);
+        if (_currentQuestion.ChoiceB != null) yield return ("B", _currentQuestion.ChoiceB);
+        if (_currentQuestion.ChoiceC != null) yield return ("C", _currentQuestion.ChoiceC);
+        if (_currentQuestion.ChoiceD != null) yield return ("D", _currentQuestion.ChoiceD);
+    }
+}
