@@ -8,11 +8,11 @@
 @inject GameDbContext Db
 @using Microsoft.EntityFrameworkCore
 
-<PageTitle>Zone – CodeQuest</PageTitle>
+<PageTitle>Zone Map – CodeQuest</PageTitle>
 
 @if (_loading)
 {
-    <p class="text-center mt-5">Loading zone...</p>
+    <div class="text-center mt-5"><p>&#x2694;&#xFE0F; Loading zone map...</p></div>
 }
 else if (_zone == null)
 {
@@ -20,76 +20,105 @@ else if (_zone == null)
 }
 else
 {
-    <div class="panel mb-4 animate-fade-in-up">
-        <h2>🏔️ @_zone.Name</h2>
-        <p>@_zone.Description</p>
-        <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
+    @* Zone header *@
+    <div class="panel mb-4 animate-fade-in-up d-flex justify-content-between align-items-center">
+        <div>
+            <h2 style="font-family:var(--font-heading);margin-bottom:0.25rem;">@_zone.Name</h2>
+            <p class="muted-text mb-0" style="font-size:0.9rem;">@_zone.Description</p>
+        </div>
+        @if (_player != null)
+        {
+            <div class="text-end">
+                <div style="font-size:0.85rem;color:var(--color-muted);">@_player.HeroName</div>
+                <div class="gold-text" style="font-size:0.9rem;">&#x1FA99; @_player.Gold &nbsp; Lv.@_player.Level</div>
+            </div>
+        }
     </div>
 
-    @if (!_steps.Any())
-    {
-        <p class="text-muted">No content in this zone yet.</p>
-    }
-    else
-    {
-        <div class="zone-timeline">
-        @foreach (var (step, i) in _steps.Select((s, i) => (s, i)))
-        {
-            @* Lesson card *@
-            <div class="timeline-item">
-                <div class="timeline-icon @(step.LessonDone ? "done" : step.LessonLocked ? "locked" : "available")">📖</div>
-                <div class="panel flex-fill @(step.LessonLocked ? "locked" : "")">
-                    @if (step.LessonLocked)
-                    {
-                        <span class="muted-text">&#x1F512; @step.Lesson.Title</span>
-                        <small class="d-block muted-text">Defeat the previous monster first</small>
-                    }
-                    else
-                    {
-                        <a href="/lesson/@step.Lesson.Id">@step.Lesson.Title</a>
-                        @if (step.LessonDone)
-                        {
-                            <span class="ms-2 teal-text small">✅ Complete</span>
-                        }
-                    }
-                </div>
+    @* Candy Crush Map *@
+    <div class="map-container">
+
+        @* Coming Soon node — always at top (rendered first since column-reverse) *@
+        <div class="map-row" style="justify-content:center;margin-bottom:1rem;">
+            <div class="map-node coming-soon" title="Coming Soon">
+                <div class="map-node-badge" style="color:var(--color-muted);">Chapter II</div>
+                <span>&#x1F512;</span>
             </div>
+        </div>
+        <div class="map-connector" style="margin:0 auto;width:3px;height:24px;"></div>
 
-            @* Connector *@
-            <div class="timeline-connector"></div>
-
-            @* Monster card *@
-            @if (step.Monster != null)
+        @* Step nodes — rendered bottom-to-top via flex-direction:column-reverse *@
+        @{
+            // Group nodes into rows of 3 (last row may have fewer)
+            // Rows alternate direction for the snake effect
+            var rows = new List<List<MapNode>>();
+            var temp = new List<MapNode>();
+            foreach (var node in _nodes)
             {
-                <div class="timeline-item">
-                    <div class="timeline-icon @(step.Monster.IsUnlocked ? (i < _monsterBeaten.Length && _monsterBeaten[i] ? "done" : "available") : "locked")">⚔️</div>
-                    <div class="panel flex-fill monster-card @(step.Monster.IsUnlocked ? "" : "locked")">
-                        @if (step.Monster.Challenge.IsBoss)
-                        {
-                            <div class="boss-crown">&#x1F451;</div>
-                        }
-                        <strong>@step.Monster.Challenge.MonsterName</strong>
-                        <span class="ms-2 badge-@(step.Monster.Challenge.Difficulty.ToString().ToLower()) difficulty-badge">@step.Monster.Challenge.Difficulty</span>
-                        @if (i < _monsterBeaten.Length && _monsterBeaten[i])
-                        {
-                            <span class="ms-2 teal-text small">✅ Defeated</span>
-                        }
-                        else if (step.Monster.IsUnlocked)
-                        {
-                            <a href="/battle/@step.Monster.Challenge.Id" class="btn-fantasy btn-sm ms-3">⚔️ Fight!</a>
-                        }
-                        else
-                        {
-                            <span class="muted-text ms-2"><small>&#x1F512; @step.Monster.LockReason</small></span>
-                        }
-                    </div>
-                </div>
-                @if (i < _steps.Count - 1)
+                temp.Add(node);
+                if (temp.Count == 3) { rows.Add(new List<MapNode>(temp)); temp.Clear(); }
+            }
+            if (temp.Count > 0) rows.Add(new List<MapNode>(temp));
+        }
+
+        @for (int rowIdx = 0; rowIdx < rows.Count; rowIdx++)
+        {
+            var row = rows[rowIdx];
+            var isReverse = rowIdx % 2 == 1;
+            <div class="map-row @(isReverse ? "reverse" : "")">
+                @for (int nodeIdx = 0; nodeIdx < row.Count; nodeIdx++)
                 {
-                    <div class="timeline-connector"></div>
+                    var node = row[nodeIdx];
+                    @if (nodeIdx > 0)
+                    {
+                        var prevNode = row[nodeIdx - 1];
+                        <div class="map-connector @(prevNode.State == NodeState.Completed ? "done" : "")"></div>
+                    }
+                    <div class="map-node @(node.IsLesson ? "lesson" : "battle") @(node.State.ToString().ToLower()) @(node.IsBoss ? "boss" : "")"
+                         @onclick="() => OnNodeClick(node)"
+                         title="@node.Title">
+                        <div class="map-node-badge @(node.IsLesson ? "lesson-badge" : "battle-badge")">@(node.IsLesson ? "L" : "B")</div>
+                        @node.Number
+                    </div>
                 }
+            </div>
+            @if (rowIdx < rows.Count - 1)
+            {
+                <div style="display:flex;justify-content:@(isReverse ? "flex-start" : "flex-end");padding:@(isReverse ? "0 0 0 2rem" : "0 2rem 0 0");">
+                    <div class="map-connector" style="width:3px;height:20px;"></div>
+                </div>
             }
         }
+    </div>
+
+    @* Modal *@
+    @if (_modalNode != null)
+    {
+        <div class="map-modal-backdrop" @onclick="CloseModal">
+            <div class="map-modal" @onclick:stopPropagation>
+                <button class="map-modal-close" @onclick="CloseModal">&#x2715;</button>
+                <div class="mb-1" style="font-size:0.75rem;color:var(--color-muted);">
+                    @(_modalNode.IsLesson ? "Lesson" : ("Battle" + (_modalNode.IsBoss ? " &#x1F451; BOSS" : "")))
+                    &nbsp;&#x2022;&nbsp; Node @_modalNode.Number
+                </div>
+                <h4 style="margin-bottom:0.5rem;">@(_modalNode.IsLesson ? "&#x1F4D6;" : "&#x2694;&#xFE0F;") @_modalNode.Title</h4>
+                <p class="muted-text" style="font-size:0.9rem;margin-bottom:1.25rem;">@_modalNode.Description</p>
+                @if (_modalNode.State == NodeState.Completed)
+                {
+                    <span class="teal-text small">&#x2705; Completed</span>
+                    <a href="@(_modalNode.IsLesson ? $"/lesson/{_modalNode.EntityId}" : $"/battle/{_modalNode.EntityId}")"
+                       class="btn-secondary-fantasy ms-3">Review</a>
+                }
+                else if (_modalNode.State == NodeState.Current)
+                {
+                    <a href="@(_modalNode.IsLesson ? $"/lesson/{_modalNode.EntityId}" : $"/battle/{_modalNode.EntityId}")"
+                       class="btn-fantasy">@(_modalNode.IsLesson ? "&#x1F4D6; Start Lesson" : "&#x2694;&#xFE0F; Fight!")</a>
+                }
+                else
+                {
+                    <span class="muted-text small">&#x1F512; Complete previous steps to unlock</span>
+                }
+            </div>
         </div>
     }
 }
@@ -97,67 +126,115 @@ else
 @code {
     [Parameter] public int ZoneId { get; set; }
 
-    private record ZoneStep(Lesson Lesson, bool LessonDone, bool LessonLocked, GameService.MonsterStatus? Monster);
-
-    private Zone? _zone;
-    private List<Lesson> _lessons = new();
-    private HashSet<int> _completedLessonIds = new();
-    private List<GameService.MonsterStatus> _monsters = new();
-    private Player? _player;
     private bool _loading = true;
-    private List<ZoneStep> _steps = new();
-    private bool[] _monsterBeaten = Array.Empty<bool>();
+    private Zone? _zone;
+    private Player? _player;
+    private List<MapNode> _nodes = new();
+    private MapNode? _modalNode;
+
+    private record MapNode(
+        int Number,
+        string Title,
+        string Description,
+        int EntityId,
+        bool IsLesson,
+        bool IsBoss,
+        NodeState State
+    );
+    private enum NodeState { Completed, Current, Locked }
 
     protected override async Task OnInitializedAsync()
     {
+        // Load player
         var httpContext = HttpContextAccessor.HttpContext;
         var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
         if (userId != null)
-        {
             _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
-        }
 
-        _zone = await Db.Zones.FirstOrDefaultAsync(z => z.Id == ZoneId);
-        if (_zone != null)
+        // Load zone with lessons and challenges
+        _zone = await Db.Zones
+            .Include(z => z.Lessons)
+            .Include(z => z.Challenges).ThenInclude(c => c.Lesson)
+            .FirstOrDefaultAsync(z => z.Id == ZoneId);
+
+        if (_zone == null || _player == null) { _loading = false; return; }
+
+        var lessons = _zone.Lessons.OrderBy(l => l.OrderNumber).ToList();
+        var challenges = _zone.Challenges.OrderBy(c => c.OrderNumber).ToList();
+
+        // Load progress data
+        var completedLessonIds = await Db.LessonProgresses
+            .Where(lp => lp.PlayerId == _player.Id)
+            .Select(lp => lp.LessonId)
+            .ToListAsync();
+
+        var wonChallengeIds = await Db.Battles
+            .AsNoTracking()
+            .Where(b => b.PlayerId == _player.Id && b.Status == BattleStatus.Won)
+            .Select(b => b.ChallengeId)
+            .Distinct()
+            .ToListAsync();
+
+        // Build node list — 2 nodes per lesson (lesson + monster)
+        _nodes = new List<MapNode>();
+        bool previousStepDone = true; // first lesson is always available
+
+        for (int i = 0; i < lessons.Count; i++)
         {
-            _lessons = await Db.Lessons
-                .Where(l => l.ZoneId == ZoneId)
-                .OrderBy(l => l.OrderNumber)
-                .ToListAsync();
+            var lesson = lessons[i];
+            var challenge = challenges.ElementAtOrDefault(i);
 
-            if (_player != null)
+            bool lessonDone = completedLessonIds.Contains(lesson.Id);
+            bool monsterDone = challenge != null && wonChallengeIds.Contains(challenge.Id);
+
+            // Lesson node
+            NodeState lessonState;
+            if (lessonDone) lessonState = NodeState.Completed;
+            else if (previousStepDone) lessonState = NodeState.Current;
+            else lessonState = NodeState.Locked;
+
+            _nodes.Add(new MapNode(
+                Number: i * 2 + 1,
+                Title: lesson.Title,
+                Description: lesson.Story.Length > 120 ? lesson.Story[..120] + "..." : lesson.Story,
+                EntityId: lesson.Id,
+                IsLesson: true,
+                IsBoss: false,
+                State: lessonState
+            ));
+
+            previousStepDone = lessonDone;
+
+            // Monster node
+            if (challenge != null)
             {
-                var progress = await Db.LessonProgresses
-                    .Where(lp => lp.PlayerId == _player.Id && _lessons.Select(l => l.Id).Contains(lp.LessonId))
-                    .ToListAsync();
-                _completedLessonIds = progress.Select(p => p.LessonId).ToHashSet();
+                NodeState monsterState;
+                if (monsterDone) monsterState = NodeState.Completed;
+                else if (previousStepDone) monsterState = NodeState.Current;
+                else monsterState = NodeState.Locked;
 
-                _monsters = await GameSvc.GetMonsterStatusesAsync(ZoneId, _player.Id);
+                _nodes.Add(new MapNode(
+                    Number: i * 2 + 2,
+                    Title: challenge.MonsterName,
+                    Description: $"Difficulty: {challenge.Difficulty} | HP: {challenge.MonsterHp} | Attack: {challenge.MonsterAttack} | Questions: {challenge.QuestionsToDefeat}",
+                    EntityId: challenge.Id,
+                    IsLesson: false,
+                    IsBoss: challenge.IsBoss,
+                    State: monsterState
+                ));
 
-                // Check which monsters have been beaten
-                _monsterBeaten = new bool[_monsters.Count];
-                for (int i = 0; i < _monsters.Count; i++)
-                {
-                    _monsterBeaten[i] = await GameSvc.HasWonBattleAsync(_monsters[i].Challenge.Id, _player.Id);
-                }
-
-                // Build interleaved steps: each lesson paired with its monster
-                _steps = new List<ZoneStep>();
-                var orderedLessons = _lessons.OrderBy(l => l.OrderNumber).ToList();
-                for (int i = 0; i < orderedLessons.Count; i++)
-                {
-                    var lesson = orderedLessons[i];
-                    bool lessonDone = _completedLessonIds.Contains(lesson.Id);
-                    // Lesson i is locked if the monster at index i-1 has not been beaten
-                    bool lessonLocked = i > 0 && !_monsterBeaten[i - 1];
-                    var pairedMonster = _monsters.FirstOrDefault(m =>
-                        m.Challenge.LessonId == lesson.Id ||
-                        m.Challenge.OrderNumber == lesson.OrderNumber);
-                    _steps.Add(new ZoneStep(lesson, lessonDone, lessonLocked, pairedMonster));
-                }
+                previousStepDone = monsterDone;
             }
         }
+
         _loading = false;
     }
+
+    private void OnNodeClick(MapNode node)
+    {
+        if (node.State == NodeState.Locked) return;
+        _modalNode = node;
+    }
+
+    private void CloseModal() => _modalNode = null;
 }

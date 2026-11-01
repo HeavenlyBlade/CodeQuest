@@ -57,17 +57,24 @@ else
     else if (_battle.Status == BattleStatus.Lost)
     {
         <div class="panel text-center animate-fade-in-up">
-            <h2>💀 Defeated!</h2>
-            @if (_noQuestions)
+            @if (_defeatReason == "retreat")
             {
-                <p>No more questions available. The monster retreats... for now.</p>
+                <h2>&#x1F6AB; Retreat!</h2>
+                <p>You can't defeat <strong>@_challenge?.MonsterName</strong> as you are now.</p>
+                <p class="muted-text">Try to re-learn the lesson and come back stronger.</p>
+                @if (_challenge?.LessonId != null)
+                {
+                    <a href="/lesson/@_challenge.LessonId" class="btn-fantasy mt-3">&#x1F4D6; Re-learn the Lesson</a>
+                }
+                <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-3">Back to Zone</a>
             }
             else
             {
+                <h2>&#x1F480; Defeated!</h2>
                 <p>You were struck down by <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
+                <button class="btn-fantasy mt-3" @onclick="TryAgain">&#x1F504; Try Again</button>
+                <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-3">Back to Zone</a>
             }
-            <button class="btn-fantasy mt-2" @onclick="TryAgain">🔄 Try Again</button>
-            <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-2">Back to Zone</a>
         </div>
     }
     <!-- Battle in progress -->
@@ -232,6 +239,7 @@ else
     private bool _submitting;
     private bool _showFeedback;
     private bool _noQuestions;
+    private string _defeatReason = "";
     private Lesson? _nextLesson;
 
     // WriteCode editor state
@@ -309,7 +317,10 @@ else
 
         // Refresh battle status if monster retreated
         if (_noQuestions)
+        {
             _battle = await Db.Battles.FindAsync(_battle!.Id) ?? _battle;
+            _defeatReason = "retreat";
+        }
     }
 
     private async Task LoadNextQuestion()
@@ -363,6 +374,10 @@ else
         if (_battle.Status == BattleStatus.Won && _challenge != null)
             await LoadNextLessonAsync();
 
+        // Set defeat reason when battle is lost
+        if (_battle.Status == BattleStatus.Lost)
+            _defeatReason = _lastResult.DefeatReason == "retreat" ? "retreat" : "";
+
         _submitting = false;
     }
 
@@ -388,6 +403,7 @@ else
 
     private void TryAgain()
     {
+        _defeatReason = "";
         // forceLoad: true creates a fresh circuit and starts a new battle
         Nav.NavigateTo($"/battle/{ChallengeId}", forceLoad: true);
     }

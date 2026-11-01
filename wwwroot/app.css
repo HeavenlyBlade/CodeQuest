@@ -269,7 +269,7 @@ a:hover { color: var(--color-accent); }
     line-height: 1;
 }
 
-/* ���� Zone timeline (interleaved lesson �� monster flow) ���������� */
+/* ���� Zone timeline (interleaved lesson �� monster flow) ���������� */
 .zone-timeline { display: flex; flex-direction: column; gap: 0; }
 .timeline-item { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0; }
 .timeline-icon {
@@ -286,3 +286,117 @@ a:hover { color: var(--color-accent); }
     background: linear-gradient(to bottom, rgba(233,69,96,0.3), rgba(78,205,196,0.3));
     margin-left: 17px;
 }
+
+/* ── Candy Crush Map ─────────────────────────────────────── */
+.map-container {
+    padding: 2rem 1rem 1rem;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0;
+    max-width: 520px;
+    margin: 0 auto;
+}
+.map-row {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+}
+.map-row.reverse { flex-direction: row-reverse; }
+
+.map-node {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 3px solid transparent;
+    user-select: none;
+    flex-shrink: 0;
+}
+.map-node:hover:not(.locked):not(.coming-soon) { transform: scale(1.1); }
+.map-node.lesson { background: linear-gradient(135deg, #1a3a5c, #16213e); border-color: rgba(78,205,196,0.5); color: var(--color-teal); }
+.map-node.battle { background: linear-gradient(135deg, #3a1a1a, #2a0f0f); border-color: rgba(233,69,96,0.5); color: var(--color-accent); }
+.map-node.completed { border-color: var(--color-teal); box-shadow: 0 0 10px rgba(78,205,196,0.35); color: #fff; background: linear-gradient(135deg, #0f3a2a, #0a2a1a); }
+.map-node.battle.completed { border-color: var(--color-gold); box-shadow: 0 0 10px rgba(245,166,35,0.35); background: linear-gradient(135deg, #2a1a05, #1a0f00); }
+.map-node.current { animation: map-pulse 1.8s ease infinite; }
+.map-node.locked { opacity: 0.3; cursor: not-allowed; filter: grayscale(0.6); }
+.map-node.boss { width: 74px; height: 74px; font-size: 1.3rem; border-color: var(--color-gold); box-shadow: 0 0 18px var(--color-gold-glow); }
+.map-node.boss.current { animation: boss-pulse 1.5s ease infinite; }
+.map-node.coming-soon { width: 56px; height: 56px; opacity: 0.35; cursor: default; border-color: rgba(138,138,154,0.25); color: var(--color-muted); font-size: 0.65rem; text-align: center; flex-direction: column; display: flex; }
+
+@keyframes map-pulse {
+    0%,100% { box-shadow: 0 0 8px var(--color-accent-glow); transform: scale(1); }
+    50%      { box-shadow: 0 0 22px rgba(233,69,96,0.65); transform: scale(1.09); }
+}
+@keyframes boss-pulse {
+    0%,100% { box-shadow: 0 0 12px var(--color-gold-glow); transform: scale(1); }
+    50%      { box-shadow: 0 0 28px rgba(245,166,35,0.7); transform: scale(1.1); }
+}
+
+.map-node-badge {
+    position: absolute;
+    top: -9px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.5rem;
+    padding: 1px 5px;
+    border-radius: 99px;
+    font-family: var(--font-body);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.lesson-badge { background: rgba(78,205,196,0.2); color: var(--color-teal); }
+.battle-badge { background: rgba(233,69,96,0.2); color: var(--color-accent); }
+
+.map-connector {
+    flex: 1;
+    height: 3px;
+    min-width: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    margin: 0 3px;
+}
+.map-connector.done { background: linear-gradient(90deg, var(--color-teal), var(--color-gold)); opacity: 0.5; }
+
+/* Modal */
+.map-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+.map-modal {
+    background: var(--color-panel);
+    border: 1px solid rgba(233,69,96,0.4);
+    border-radius: 14px;
+    padding: 1.75rem;
+    max-width: 400px;
+    width: 100%;
+    position: relative;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(233,69,96,0.1);
+    animation: scaleIn 0.2s ease;
+}
+.map-modal-close {
+    position: absolute; top: 0.75rem; right: 0.75rem;
+    background: none; border: none;
+    color: var(--color-muted); font-size: 1rem;
+    cursor: pointer; padding: 0.2rem 0.5rem;
+    border-radius: 4px; line-height: 1;
+    transition: color 0.15s;
+}
+.map-modal-close:hover { color: var(--color-accent); }

@@ -282,7 +282,8 @@ public class GameService
         int XpGained,
         int GoldGained,
         bool LeveledUp,
-        int NewLevel
+        int NewLevel,
+        string DefeatReason = ""  // "retreat" when questions run out
     );
 
     /// <summary>Processes a player's answer: records attempt, updates HP, checks win/loss.</summary>
