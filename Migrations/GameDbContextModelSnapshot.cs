@@ -113,6 +113,9 @@ namespace CodeQuest.Migrations
                     b.Property<bool>("IsBoss")
                         .HasColumnType("boolean");
 
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("MonsterAttack")
                         .HasColumnType("integer");
 
@@ -136,6 +139,8 @@ namespace CodeQuest.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LessonId");
 
                     b.HasIndex("ZoneId");
 
@@ -558,11 +563,17 @@ namespace CodeQuest.Migrations
 
             modelBuilder.Entity("CodeQuest.Models.Challenge", b =>
                 {
+                    b.HasOne("CodeQuest.Models.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId");
+
                     b.HasOne("CodeQuest.Models.Zone", "Zone")
                         .WithMany("Challenges")
                         .HasForeignKey("ZoneId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Lesson");
 
                     b.Navigation("Zone");
                 });

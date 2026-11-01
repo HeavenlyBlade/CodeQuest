@@ -46,7 +46,11 @@ else
             {
                 <p class="text-muted small">(Already beaten — no extra rewards this time)</p>
             }
-            <a href="/zone/@(_challenge?.ZoneId)" class="btn-fantasy mt-2">Back to Zone</a>
+            @if (_nextLesson != null)
+            {
+                <a href="/lesson/@_nextLesson.Id" class="btn-fantasy mt-2">📖 Next: @_nextLesson.Title</a>
+            }
+            <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-2">Back to Zone</a>
         </div>
     }
     <!-- Battle status: Defeat -->
@@ -71,12 +75,27 @@ else
     {
         <!-- Monster HUD -->
         <div class="panel mb-3">
-            <h3>👾 @_challenge?.MonsterName @(_challenge?.IsBoss == true ? "👑" : "")</h3>
-            <div class="bar-label">Monster HP</div>
-            <div class="hp-bar mt-1 mb-1">
-                <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Monster sprite (shows pixel art if available, falls back gracefully) -->
+                <div class="monster-sprite-wrap">
+                    @if (MonsterSpritePath != null)
+                    {
+                        <img src="@MonsterSpritePath" alt="@_challenge?.MonsterName" class="monster-sprite" />
+                    }
+                    else
+                    {
+                        <div class="monster-sprite-fallback">👾</div>
+                    }
+                </div>
+                <div class="flex-fill">
+                    <h3 class="mb-1">@_challenge?.MonsterName @(_challenge?.IsBoss == true ? "👑" : "")</h3>
+                    <div class="bar-label">Monster HP</div>
+                    <div class="hp-bar mt-1 mb-1">
+                        <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
+                    </div>
+                    <small>@_battle.MonsterHpLeft / @_challenge?.MonsterHp HP</small>
+                </div>
             </div>
-            <small>@_battle.MonsterHpLeft / @_challenge?.MonsterHp HP</small>
         </div>
 
         <div class="battle-vs">&#8212; VS &#8212;</div>
@@ -213,6 +232,7 @@ else
     private bool _submitting;
     private bool _showFeedback;
     private bool _noQuestions;
+    private Lesson? _nextLesson;
 
     // WriteCode editor state
     private bool _editorInitialized = false;
@@ -221,8 +241,25 @@ else
 
     private int MonsterHpPercent => _battle == null || _challenge == null ? 0
         : (int)((double)_battle.MonsterHpLeft / _challenge.MonsterHp * 100);
+
     private int PlayerHpPercent => _player == null ? 0
         : (int)((double)_player.CurrentHp / _player.MaxHp * 100);
+
+    // Sprite lookup: checks if the monster name CONTAINS a known keyword (case-insensitive).
+    // This means "Valley Slime", "Mud Slime", "Data Slime" all use slime.gif automatically.
+    // Add new sprite files to wwwroot/images/monsters/ and register their keyword here.
+    private static readonly (string keyword, string path)[] _spriteKeywords =
+    {
+        ("slime",   "/images/monsters/slime.gif"),
+        ("goblin",  "/images/monsters/goblin.gif"),
+        ("dragon",  "/images/monsters/variable-dragon.gif"),
+    };
+
+    private string? MonsterSpritePath =>
+        _challenge == null ? null :
+        _spriteKeywords
+            .FirstOrDefault(s => _challenge.MonsterName.Contains(s.keyword, StringComparison.OrdinalIgnoreCase))
+            .path;
 
     protected override async Task OnInitializedAsync()
     {
@@ -239,6 +276,10 @@ else
 
         if (_battle.Status == BattleStatus.InProgress)
             await LoadQuestion();
+
+        // If battle is already won, pre-load the next lesson
+        if (_battle.Status == BattleStatus.Won && _challenge != null)
+            await LoadNextLessonAsync();
 
         _loading = false;
     }
@@ -318,7 +359,31 @@ else
         _battle = await Db.Battles.FindAsync(_battle.Id) ?? _battle;
         _player = await Db.Players.FindAsync(_player.Id) ?? _player;
 
+        // Load next lesson when battle is won, for the victory screen
+        if (_battle.Status == BattleStatus.Won && _challenge != null)
+            await LoadNextLessonAsync();
+
         _submitting = false;
+    }
+
+    /// <summary>
+    /// Finds the lesson that follows the one paired with this challenge.
+    /// Called when a battle is won to populate the victory screen's "Next Lesson" link.
+    /// </summary>
+    private async Task LoadNextLessonAsync()
+    {
+        if (_challenge == null) return;
+        var currentLesson = _challenge.LessonId.HasValue
+            ? await Db.Lessons.FindAsync(_challenge.LessonId.Value)
+            : null;
+        if (currentLesson != null)
+        {
+            _nextLesson = await Db.Lessons
+                .Where(l => l.ZoneId == _challenge.ZoneId
+                         && l.OrderNumber > currentLesson.OrderNumber)
+                .OrderBy(l => l.OrderNumber)
+                .FirstOrDefaultAsync();
+        }
     }
 
     private void TryAgain()

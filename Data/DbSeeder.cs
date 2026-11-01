@@ -120,12 +120,17 @@ public static class DbSeeder
         });
 
         // ----- Monsters (with OrderNumber) -----
+        var lesson1 = zone.Lessons[0];
+        var lesson2 = zone.Lessons[1];
+        var lesson3 = zone.Lessons[2];
+
         zone.Challenges.AddRange(new[]
         {
             new Challenge
             {
                 OrderNumber = 1,
-                MonsterName = "Slime",
+                Lesson = lesson1,   // paired with The Storage Chests
+                MonsterName = "Valley Slime",
                 MonsterHp = 30,
                 MonsterAttack = 5,
                 Difficulty = Difficulty.Easy,
@@ -137,7 +142,8 @@ public static class DbSeeder
             new Challenge
             {
                 OrderNumber = 2,
-                MonsterName = "Goblin",
+                Lesson = lesson2,   // paired with The Goblin's Tricks
+                MonsterName = "Data Goblin",
                 MonsterHp = 30,
                 MonsterAttack = 8,
                 Difficulty = Difficulty.Medium,
@@ -149,6 +155,7 @@ public static class DbSeeder
             new Challenge
             {
                 OrderNumber = 3,
+                Lesson = lesson3,   // paired with The Dragon's Riddles
                 MonsterName = "Variable Dragon",
                 MonsterHp = 40,
                 MonsterAttack = 12,

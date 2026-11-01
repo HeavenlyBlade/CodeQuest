@@ -61,7 +61,8 @@ else
             </button>
         }
 
-        @if (_nextLesson != null)
+        @* Show Next Lesson only when there is no paired monster, or that monster has been beaten *@
+        @if (_nextLesson != null && _pairedMonsterBeaten)
         {
             <a href="/lesson/@_nextLesson.Id" class="btn btn-outline-primary">Next Lesson →</a>
         }
@@ -71,6 +72,16 @@ else
     {
         <div class="alert alert-success mt-3">@_message</div>
         <div class="tutorial-callout" style="border-left-color:var(--color-teal);"><span class="teal-text">&#x2728; Lesson complete! Keep going to prepare for battle.</span></div>
+
+        @* Fight button: show after lesson completion when paired monster exists *@
+        @if (_pairedChallenge != null)
+        {
+            <div class="mt-3">
+                <a href="/battle/@_pairedChallenge.Id" class="btn-fantasy">
+                    ⚔️ Fight @_pairedChallenge.MonsterName!
+                </a>
+            </div>
+        }
     }
     </div>
 }
@@ -80,11 +91,13 @@ else
 
     private Lesson? _lesson;
     private Lesson? _nextLesson;
+    private Challenge? _pairedChallenge;
     private Player? _player;
     private bool _alreadyDone;
     private bool _finishing;
     private string _message = "";
     private bool _loading = true;
+    private bool _pairedMonsterBeaten;
 
     protected override async Task OnInitializedAsync()
     {
@@ -103,6 +116,13 @@ else
             _nextLesson = await Db.Lessons
                 .Where(l => l.ZoneId == _lesson.ZoneId && l.OrderNumber == _lesson.OrderNumber + 1)
                 .FirstOrDefaultAsync();
+
+            // Load the monster paired with this lesson
+            _pairedChallenge = await GameSvc.GetPairedChallengeAsync(LessonId);
+
+            // Next Lesson button is only shown after the paired monster is defeated
+            _pairedMonsterBeaten = _pairedChallenge == null
+                || await GameSvc.HasWonBattleAsync(_pairedChallenge.Id, _player.Id);
         }
         _loading = false;
     }

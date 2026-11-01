@@ -235,3 +235,54 @@ a:hover { color: var(--color-accent); }
     top: 0.5rem;
     color: var(--color-muted);
 }
+
+/* ── Landing page glass cards (over video background) ────── */
+.home-main .panel {
+    background: rgba(22, 33, 62, 0.70);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-color: rgba(233, 69, 96, 0.35);
+}
+
+/* ── Monster sprites ─────────────────────────────────────── */
+.monster-sprite-wrap {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(233,69,96,0.2);
+    border-radius: 8px;
+    padding: 6px;
+}
+.monster-sprite {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    image-rendering: pixelated;   /* keeps pixel art crisp, no blurring */
+    image-rendering: crisp-edges;
+}
+.monster-sprite-fallback {
+    font-size: 2.8rem;
+    line-height: 1;
+}
+
+/* ���� Zone timeline (interleaved lesson �� monster flow) ���������� */
+.zone-timeline { display: flex; flex-direction: column; gap: 0; }
+.timeline-item { display: flex; align-items: flex-start; gap: 1rem; margin-bottom: 0; }
+.timeline-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; flex-shrink: 0; margin-top: 0.4rem;
+    border: 2px solid rgba(255,255,255,0.1);
+}
+.timeline-icon.done { background: rgba(78,205,196,0.2); border-color: var(--color-teal); }
+.timeline-icon.available { background: rgba(233,69,96,0.15); border-color: var(--color-accent); }
+.timeline-icon.locked { background: rgba(138,138,154,0.1); border-color: rgba(138,138,154,0.2); }
+.timeline-connector {
+    width: 2px; height: 24px;
+    background: linear-gradient(to bottom, rgba(233,69,96,0.3), rgba(78,205,196,0.3));
+    margin-left: 17px;
+}

@@ -14,4 +14,8 @@ public class Challenge
     public int OrderNumber { get; set; }
     public int ZoneId { get; set; }
     public Zone? Zone { get; set; }
+
+    /// <summary>The lesson this monster is paired with. Complete this lesson to unlock the monster.</summary>
+    public int? LessonId { get; set; }
+    public Lesson? Lesson { get; set; }
 }

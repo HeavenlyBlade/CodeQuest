@@ -90,20 +90,6 @@ public class GameService
         }
     }
 
-    /// <summary>Returns true when the player has a LessonProgress row for every lesson in the zone.</summary>
-    public bool AreAllLessonsDone(int zoneId, int playerId, List<LessonProgress> allProgress)
-    {
-        // Caller passes in the already-loaded progress list to avoid extra queries
-        var lessonIds = _db.Lessons
-            .Where(l => l.ZoneId == zoneId)
-            .Select(l => l.Id)
-            .ToList();
-
-        if (!lessonIds.Any()) return false;
-
-        return lessonIds.All(lid => allProgress.Any(p => p.PlayerId == playerId && p.LessonId == lid));
-    }
-
     // -------------------------------------------------------------------------
     // Monster unlock
     // -------------------------------------------------------------------------
@@ -116,6 +102,7 @@ public class GameService
     {
         var monsters = await _db.Challenges
             .Where(c => c.ZoneId == zoneId)
+            .Include(c => c.Lesson)   // needed for lesson title in lock reason
             .OrderBy(c => c.OrderNumber)
             .ToListAsync();
 
@@ -123,40 +110,56 @@ public class GameService
             .Where(lp => lp.PlayerId == playerId)
             .ToListAsync();
 
-        bool lessonsAllDone = AreAllLessonsDone(zoneId, playerId, progress);
-
         var result = new List<MonsterStatus>();
         Challenge? prev = null;
 
         foreach (var monster in monsters)
         {
-            if (!lessonsAllDone)
-            {
-                result.Add(new MonsterStatus(monster, false, "Finish all lessons in this zone first"));
-            }
-            else if (prev == null)
-            {
-                // First monster: unlocked once lessons are done
-                result.Add(new MonsterStatus(monster, true, ""));
-            }
-            else
-            {
-                // Subsequent monsters: need previous monster beaten
-                bool prevWon = await _db.Battles
-                    .AsNoTracking()
-                    .AnyAsync(b => b.PlayerId == playerId
-                                && b.ChallengeId == prev.Id
-                                && b.Status == BattleStatus.Won);
+            // Gate 1: paired lesson must be completed
+            bool linkedLessonDone = monster.LessonId == null
+                || progress.Any(p => p.LessonId == monster.LessonId);
 
-                if (prevWon)
-                    result.Add(new MonsterStatus(monster, true, ""));
-                else
-                    result.Add(new MonsterStatus(monster, false, $"Defeat {prev.MonsterName} first"));
-            }
+            // Gate 2: previous monster must be beaten (first monster has no prev)
+            bool prevBeaten = prev == null || await _db.Battles
+                .AsNoTracking()
+                .AnyAsync(b => b.PlayerId == playerId
+                            && b.ChallengeId == prev.Id
+                            && b.Status == BattleStatus.Won);
+
+            bool isUnlocked = linkedLessonDone && prevBeaten;
+
+            string lockReason = isUnlocked ? "" :
+                !linkedLessonDone
+                    ? $"Complete '{monster.Lesson?.Title ?? "the lesson"}' first"
+                    : $"Defeat {prev!.MonsterName} first";
+
+            result.Add(new MonsterStatus(monster, isUnlocked, lockReason));
             prev = monster;
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// Returns the Challenge paired with a given lesson, or null if none.
+    /// Used by LessonPage to show the "Fight!" button after lesson completion.
+    /// </summary>
+    public async Task<Challenge?> GetPairedChallengeAsync(int lessonId)
+    {
+        return await _db.Challenges
+            .FirstOrDefaultAsync(c => c.LessonId == lessonId);
+    }
+
+    /// <summary>
+    /// Returns true if the player has a Won battle for the given challenge.
+    /// Used by ZonePage and LessonPage to check if a monster has been beaten.
+    /// </summary>
+    public async Task<bool> HasWonBattleAsync(int challengeId, int playerId)
+    {
+        return await _db.Battles.AsNoTracking()
+            .AnyAsync(b => b.PlayerId == playerId
+                        && b.ChallengeId == challengeId
+                        && b.Status == BattleStatus.Won);
     }
 
     // -------------------------------------------------------------------------
