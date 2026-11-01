@@ -29,6 +29,8 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 // ---- Application services ----
 builder.Services.AddScoped<GameService>();
+// Singleton: ScriptOptions are created once; ExecuteAsync is thread-safe.
+builder.Services.AddSingleton<CodeExecutionService>();
 builder.Services.AddHttpContextAccessor();
 
 // ---- Authorization ----

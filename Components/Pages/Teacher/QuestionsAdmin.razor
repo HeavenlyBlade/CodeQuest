@@ -2,6 +2,7 @@
 @attribute [Authorize(Roles = "Teacher")]
 @rendermode InteractiveServer
 @using CodeQuest.Data
+@using CodeQuest.Models
 @inject GameDbContext Db
 @using Microsoft.EntityFrameworkCore
 
@@ -60,6 +61,7 @@
             <select class="form-select" @bind="_newType">
                 <option value="@ChallengeType.MultipleChoice">Multiple Choice</option>
                 <option value="@ChallengeType.PredictOutput">Predict Output</option>
+                <option value="@ChallengeType.WriteCode">Write Code</option>
             </select>
         </div>
         <div class="col-12">
@@ -79,11 +81,48 @@
                 </select>
             </div>
         }
-        else
+        else if (_newType == ChallengeType.PredictOutput)
         {
             <div class="col-md-6">
                 <input class="form-control" placeholder="Correct output (exact)" @bind="_newCorrect" />
             </div>
+        }
+        else if (_newType == ChallengeType.WriteCode)
+        {
+            <div class="mb-3">
+                <label class="form-label fw-bold">Starter Code</label>
+                <small class="d-block text-muted mb-1">Pre-filled code scaffold shown in the Monaco editor to students.</small>
+                <textarea class="form-control font-monospace" rows="6"
+                          @bind="_newStarterCode"
+                          placeholder="// Write your starter code here..."></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Test Cases</label>
+                <small class="d-block text-muted mb-1">At least one test case required. Leave Input blank if the program takes no input.</small>
+                @foreach (var (tc, i) in _newTestCases.Select((t, i) => (t, i)))
+                {
+                    <div class="d-flex gap-2 mb-2 align-items-start">
+                        <div class="flex-fill">
+                            <label class="form-label small">Input (stdin)</label>
+                            <input class="form-control form-control-sm font-monospace"
+                                   placeholder="(blank if no input)"
+                                   @bind="_newTestCases[i].Input" />
+                        </div>
+                        <div class="flex-fill">
+                            <label class="form-label small">Expected Output</label>
+                            <input class="form-control form-control-sm font-monospace"
+                                   placeholder="exact expected output"
+                                   @bind="_newTestCases[i].ExpectedOutput" />
+                        </div>
+                        <button class="btn btn-sm btn-outline-danger mt-4"
+                                @onclick="() => _newTestCases.RemoveAt(i)"
+                                title="Remove test case">✕</button>
+                    </div>
+                }
+                <button class="btn btn-sm btn-outline-secondary" @onclick="AddTestCase">+ Add Test Case</button>
+            </div>
+            @* Correct answer is determined by test cases — store a placeholder *@
+            @* No CorrectAnswer input shown for WriteCode *@
         }
         <div class="col-12">
             <button class="btn-fantasy" @onclick="CreateQuestion">Add Question</button>
@@ -102,6 +141,11 @@
                 @if (q.Type == ChallengeType.MultipleChoice)
                 {
                     <small>A:@q.ChoiceA B:@q.ChoiceB C:@q.ChoiceC D:@q.ChoiceD → <strong>@q.CorrectAnswer</strong></small>
+                }
+                else if (q.Type == ChallengeType.WriteCode)
+                {
+                    @* Show test case count instead of answer *@
+                    <span class="text-muted small">@(GetTestCaseCount(q)) test cases</span>
                 }
                 else
                 {
@@ -136,6 +180,17 @@
     private string _newText = "";
     private string _newA = "", _newB = "", _newC = "", _newD = "";
     private string _newCorrect = "";
+
+    // WriteCode authoring fields
+    private string _newStarterCode = string.Empty;
+    private List<TestCaseEntry> _newTestCases = new();
+    private void AddTestCase() => _newTestCases.Add(new());
+
+    public class TestCaseEntry
+    {
+        public string Input { get; set; } = string.Empty;
+        public string ExpectedOutput { get; set; } = string.Empty;
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -182,19 +237,49 @@
 
     private async Task CreateQuestion()
     {
-        if (_newZoneId == 0 || string.IsNullOrWhiteSpace(_newText) || string.IsNullOrWhiteSpace(_newCorrect))
+        if (_newZoneId == 0 || string.IsNullOrWhiteSpace(_newText))
+        {
+            ShowMsg("Zone and question text are required.", true);
+            return;
+        }
+
+        var question = new Question
+        {
+            ZoneId = _newZoneId,
+            Difficulty = _newDiff,
+            Type = _newType,
+            Text = _newText,
+            ChoiceA = _newA,
+            ChoiceB = _newB,
+            ChoiceC = _newC,
+            ChoiceD = _newD,
+            CorrectAnswer = _newCorrect,
+            IsActive = true
+        };
+
+        if (_newType == ChallengeType.WriteCode)
+        {
+            if (_newTestCases.Count == 0)
+            {
+                ShowMsg("WriteCode questions require at least one test case.", true);
+                return;
+            }
+            question.StarterCode = _newStarterCode;
+            question.TestCasesJson = System.Text.Json.JsonSerializer.Serialize(
+                _newTestCases.Select(t => new TestCase(t.Input, t.ExpectedOutput)).ToList());
+            question.CorrectAnswer = "(evaluated by test cases)"; // placeholder
+        }
+        else if (string.IsNullOrWhiteSpace(_newCorrect))
         {
             ShowMsg("Zone, text, and correct answer are required.", true);
             return;
         }
-        Db.Questions.Add(new Question
-        {
-            ZoneId = _newZoneId, Difficulty = _newDiff, Type = _newType,
-            Text = _newText, ChoiceA = _newA, ChoiceB = _newB, ChoiceC = _newC, ChoiceD = _newD,
-            CorrectAnswer = _newCorrect, IsActive = true
-        });
+
+        Db.Questions.Add(question);
         await Db.SaveChangesAsync();
         _newText = ""; _newA = ""; _newB = ""; _newC = ""; _newD = ""; _newCorrect = "";
+        _newStarterCode = string.Empty;
+        _newTestCases = new();
         await LoadQuestions();
         BuildWarnings();
         ShowMsg("Question created.");
@@ -221,6 +306,16 @@
         await LoadQuestions();
         BuildWarnings();
         ShowMsg("Question deleted.");
+    }
+
+    private int GetTestCaseCount(Question q)
+    {
+        if (string.IsNullOrWhiteSpace(q.TestCasesJson)) return 0;
+        try {
+            var list = System.Text.Json.JsonSerializer.Deserialize<List<TestCase>>(q.TestCasesJson);
+            return list?.Count ?? 0;
+        }
+        catch { return 0; }
     }
 
     private void ShowMsg(string msg, bool isError = false) { _statusMsg = msg; _isError = isError; }

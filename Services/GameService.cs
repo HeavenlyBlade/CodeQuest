@@ -1,6 +1,7 @@
 using CodeQuest.Data;
 using CodeQuest.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace CodeQuest.Services;
 
@@ -11,10 +12,12 @@ namespace CodeQuest.Services;
 public class GameService
 {
     private readonly GameDbContext _db;
+    private readonly CodeExecutionService _executor;
 
-    public GameService(GameDbContext db)
+    public GameService(GameDbContext db, CodeExecutionService executor)
     {
         _db = db;
+        _executor = executor;
     }
 
     // -------------------------------------------------------------------------
@@ -207,7 +210,9 @@ public class GameService
         ChoiceC = q.ChoiceC,
         ChoiceD = q.ChoiceD,
         CorrectAnswer = string.Empty,  // NEVER sent to the browser before submission
-        ZoneId = q.ZoneId
+        ZoneId = q.ZoneId,
+        StarterCode = q.StarterCode
+        // TestCasesJson intentionally omitted — not needed by the browser
     };
 
     public record SafeQuestionResult(Question? Question, bool NoQuestionsLeft);
@@ -293,14 +298,22 @@ public class GameService
             ?? throw new InvalidOperationException("Current question not found.");
 
         // ---- Check correctness ----
-        bool isCorrect = question.Type switch
+        bool isCorrect;
+        if (question.Type == ChallengeType.WriteCode)
         {
-            ChallengeType.MultipleChoice =>
-                answer.Trim().Equals(question.CorrectAnswer.Trim(), StringComparison.OrdinalIgnoreCase),
-            ChallengeType.PredictOutput =>
-                answer.Trim() == question.CorrectAnswer.Trim(),  // case-sensitive
-            _ => false
-        };
+            isCorrect = await EvaluateWriteCodeAsync(question, answer);
+        }
+        else
+        {
+            isCorrect = question.Type switch
+            {
+                ChallengeType.MultipleChoice =>
+                    answer.Trim().Equals(question.CorrectAnswer.Trim(), StringComparison.OrdinalIgnoreCase),
+                ChallengeType.PredictOutput =>
+                    answer.Trim() == question.CorrectAnswer.Trim(),  // case-sensitive
+                _ => false
+            };
+        }
 
         int damageToMonster = 0;
         int damageToPlayer = 0;
@@ -397,5 +410,79 @@ public class GameService
             LeveledUp: leveledUp,
             NewLevel: newLevel
         );
+    }
+
+    /// <summary>
+    /// Runs the student's code against all test cases in the question.
+    /// Returns true only if EVERY test case passes.
+    /// </summary>
+    private async Task<bool> EvaluateWriteCodeAsync(Question question, string code)
+    {
+        if (string.IsNullOrWhiteSpace(question.TestCasesJson))
+            return false; // no test cases defined — treat as unanswerable
+
+        List<TestCase> testCases;
+        try
+        {
+            testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson)
+                        ?? new List<TestCase>();
+        }
+        catch
+        {
+            return false; // malformed JSON — teacher must fix the question
+        }
+
+        foreach (var tc in testCases)
+        {
+            var (success, stdout, _) = await _executor.ExecuteAsync(code, tc.Input);
+            if (!success || stdout.Trim() != tc.ExpectedOutput.Trim())
+                return false;
+        }
+        return testCases.Count > 0; // no test cases = not correct
+    }
+
+    /// <summary>
+    /// Runs student code against a question's test cases WITHOUT recording an attempt.
+    /// Used by the "Run Code" button in BattlePage for feedback before submitting.
+    /// Returns a formatted string showing pass/fail per test case.
+    /// </summary>
+    public async Task<string> RunCodeTestsAsync(int questionId, string code)
+    {
+        var question = await _db.Questions.FindAsync(questionId);
+        if (question == null || string.IsNullOrWhiteSpace(question.TestCasesJson))
+            return "No test cases found for this question.";
+
+        List<TestCase> testCases;
+        try { testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson) ?? new(); }
+        catch { return "Error reading test cases. Contact your teacher."; }
+
+        var sb = new System.Text.StringBuilder();
+        int passed = 0;
+
+        for (int i = 0; i < testCases.Count; i++)
+        {
+            var tc = testCases[i];
+            var (success, stdout, stderr) = await _executor.ExecuteAsync(code, tc.Input);
+
+            if (!success)
+            {
+                sb.AppendLine($"Test {i + 1}: ❌ Error — {stderr}");
+            }
+            else if (stdout.Trim() == tc.ExpectedOutput.Trim())
+            {
+                sb.AppendLine($"Test {i + 1}: ✅ Passed");
+                passed++;
+            }
+            else
+            {
+                sb.AppendLine($"Test {i + 1}: ❌ Failed");
+                sb.AppendLine($"  Expected: {tc.ExpectedOutput}");
+                sb.AppendLine($"  Got:      {stdout}");
+            }
+        }
+
+        sb.AppendLine();
+        sb.Append($"{passed}/{testCases.Count} test cases passed.");
+        return sb.ToString();
     }
 }

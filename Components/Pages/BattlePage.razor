@@ -1,9 +1,11 @@
 @page "/battle/{ChallengeId:int}"
 @attribute [Authorize]
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 @inject GameService GameSvc
 @inject NavigationManager Nav
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JS
 @using CodeQuest.Data
 @inject GameDbContext Db
 @using Microsoft.EntityFrameworkCore
@@ -99,7 +101,19 @@ else
                 {
                     <p class="text-danger">❌ Wrong! The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you.</p>
                 }
-                <p>The correct answer was: <strong>@_lastResult.CorrectAnswer</strong></p>
+
+                @if (_currentQuestion?.Type == ChallengeType.WriteCode)
+                {
+                    <p>@(_lastResult.IsCorrect ? "✅ All test cases passed!" : "❌ One or more test cases failed.")</p>
+                    @if (_testOutput is not null)
+                    {
+                        <pre class="code-block" style="font-size:0.85rem;">@_testOutput</pre>
+                    }
+                }
+                else
+                {
+                    <p>The correct answer was: <strong>@_lastResult.CorrectAnswer</strong></p>
+                }
 
                 @if (_battle.Status == BattleStatus.InProgress)
                 {
@@ -148,6 +162,24 @@ else
                                placeholder="Type the output..." />
                     </div>
                 }
+                else if (_currentQuestion.Type == ChallengeType.WriteCode)
+                {
+                    <p class="mb-1 fst-italic" style="color:var(--color-muted)">
+                        Write C# code that produces the correct output for all test cases.
+                    </p>
+                    <div id="monaco-editor-@_battle!.Id"
+                         style="height:280px; border:1px solid #444; border-radius:4px; margin-bottom:0.5rem;">
+                    </div>
+                    <button class="btn btn-sm btn-outline-info mt-1"
+                            @onclick="RunCodeTests"
+                            disabled="@_running">
+                        @(_running ? "Running…" : "▶ Run Code")
+                    </button>
+                    @if (_testOutput is not null)
+                    {
+                        <div class="mt-2 code-block" style="font-size:0.85rem; white-space:pre-wrap;">@_testOutput</div>
+                    }
+                }
 
                 @if (!string.IsNullOrEmpty(_validationMsg))
                 {
@@ -177,6 +209,11 @@ else
     private bool _showFeedback;
     private bool _noQuestions;
 
+    // WriteCode editor state
+    private bool _editorInitialized = false;
+    private bool _running = false;
+    private string? _testOutput = null;
+
     private int MonsterHpPercent => _battle == null || _challenge == null ? 0
         : (int)((double)_battle.MonsterHpLeft / _challenge.MonsterHp * 100);
     private int PlayerHpPercent => _player == null ? 0
@@ -201,6 +238,23 @@ else
         _loading = false;
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        // Initialize Monaco editor when a WriteCode question is displayed
+        if (_currentQuestion?.Type == ChallengeType.WriteCode
+            && _battle != null
+            && !_editorInitialized)
+        {
+            _editorInitialized = true;
+            var starter = _currentQuestion.StarterCode ?? "// Write your solution here\n";
+            await JS.InvokeVoidAsync(
+                "monacoInterop.init",
+                $"monaco-editor-{_battle.Id}",
+                "csharp",
+                starter);
+        }
+    }
+
     private async Task LoadQuestion()
     {
         var result = await GameSvc.GetCurrentQuestionAsync(_battle!.Id);
@@ -218,6 +272,8 @@ else
         _answer = "";
         _validationMsg = "";
         _lastResult = null;
+        _editorInitialized = false;
+        _testOutput = null;
 
         // Refresh player HP
         if (_player != null)
@@ -233,6 +289,14 @@ else
     private async Task SubmitAnswer()
     {
         if (_submitting || _player == null || _battle == null) return;
+
+        // Capture editor value for WriteCode questions before validation
+        if (_currentQuestion?.Type == ChallengeType.WriteCode)
+        {
+            _answer = await JS.InvokeAsync<string>(
+                "monacoInterop.getValue",
+                $"monaco-editor-{_battle.Id}");
+        }
 
         if (string.IsNullOrWhiteSpace(_answer))
         {
@@ -258,6 +322,42 @@ else
         Nav.NavigateTo($"/battle/{ChallengeId}", forceLoad: true);
     }
 
+    /// <summary>
+    /// Runs the current code against question test cases WITHOUT submitting.
+    /// Lets students test their code before committing to an answer.
+    /// </summary>
+    private async Task RunCodeTests()
+    {
+        if (_running || _battle == null || _currentQuestion == null) return;
+        _running = true;
+        _testOutput = null;
+        StateHasChanged();
+
+        try
+        {
+            // Capture current editor content
+            var code = await JS.InvokeAsync<string>(
+                "monacoInterop.getValue",
+                $"monaco-editor-{_battle.Id}");
+
+            if (string.IsNullOrWhiteSpace(code))
+            {
+                _testOutput = "No code to run.";
+                return;
+            }
+
+            // Run against test cases via GameService
+            var results = await GameSvc.RunCodeTestsAsync(
+                _currentQuestion.Id, code);
+            _testOutput = results;
+        }
+        finally
+        {
+            _running = false;
+            StateHasChanged();
+        }
+    }
+
     /// <summary>Returns the available choices for a multiple-choice question.</summary>
     private IEnumerable<(string Letter, string Text)> GetChoices()
     {
@@ -266,5 +366,14 @@ else
         if (_currentQuestion.ChoiceB != null) yield return ("B", _currentQuestion.ChoiceB);
         if (_currentQuestion.ChoiceC != null) yield return ("C", _currentQuestion.ChoiceC);
         if (_currentQuestion.ChoiceD != null) yield return ("D", _currentQuestion.ChoiceD);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_battle != null && _currentQuestion?.Type == ChallengeType.WriteCode)
+        {
+            try { await JS.InvokeVoidAsync("monacoInterop.dispose", $"monaco-editor-{_battle.Id}"); }
+            catch { /* ignore disposal errors */ }
+        }
     }
 }
