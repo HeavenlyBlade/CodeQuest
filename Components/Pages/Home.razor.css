@@ -1,34 +1,37 @@
 /* Scoped to Home.razor only */
 
-.home-ascii {
-    /* Force monospace — Cinzel (applied to all pre/code by h1-h5 rule) would mangle the art */
-    font-family: 'Consolas', 'Courier New', monospace !important;
-    font-size: clamp(0.5rem, 1.4vw, 0.78rem);
-    line-height: 1.35;
-    color: var(--color-accent);
-    display: inline-block;
-    text-align: left;
-    overflow-x: auto;
-    max-width: 100%;
-    /* Remove default pre margin/padding */
-    margin: 0 auto 0.5rem;
-    padding: 0;
-    background: transparent;
-    border: none;
+/* ASCII logo rendered as SVG so font scaling never distorts it */
+.home-ascii-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+}
+
+.home-ascii-svg {
+    width: clamp(260px, 55vw, 480px);
+    height: auto;
+    overflow: visible;
+}
+
+.home-ascii-svg text {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 11px;
+    fill: var(--color-accent);
     white-space: pre;
+    letter-spacing: 0;
 }
 
 .home-tagline {
     color: var(--color-muted);
     font-size: 1.1rem;
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
     font-family: var(--font-body);
 }
 
 .home-card-icon {
     font-size: 2.5rem;
     margin-bottom: 0.75rem;
-    height: 3.5rem;          /* fixed height so all three icons sit on the same baseline */
+    height: 3.5rem;
     display: flex;
     align-items: center;
     justify-content: center;

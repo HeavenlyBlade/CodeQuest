@@ -2,6 +2,14 @@
 
 <!-- Full-width layout used by the landing page only (no sidebar) -->
 <div class="home-layout">
+
+    <!-- Background video — muted, looping, no controls -->
+    <video class="home-bg-video" autoplay muted loop playsinline preload="auto">
+        <source src="/video/bg.mp4" type="video/mp4" />
+    </video>
+    <!-- Dark overlay so text stays readable over the video -->
+    <div class="home-bg-overlay"></div>
+
     <header class="home-header">
         <a class="home-brand" href="/">&#x2694;&#xFE0F; CodeQuest</a>
         <nav class="home-nav">
