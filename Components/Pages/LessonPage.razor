@@ -20,6 +20,7 @@ else if (_lesson == null)
 }
 else
 {
+    <div class="animate-fade-in-up">
     <div class="panel mb-3">
         <h2>📖 @_lesson.Title</h2>
         <a href="/zone/@_lesson.ZoneId" class="btn btn-outline-secondary btn-sm">← Back to Zone</a>
@@ -28,9 +29,10 @@ else
     <!-- Story -->
     <div class="panel mb-3">
         <h4>📜 Story</h4>
-        <blockquote class="blockquote border-start border-3 ps-3" style="border-color:var(--color-accent) !important">
+        <div class="tutorial-callout">
+            <h5 style="color:var(--color-gold);font-family:var(--font-heading);">Story</h5>
             <p>@_lesson.Story</p>
-        </blockquote>
+        </div>
     </div>
 
     <!-- Explanation -->
@@ -42,6 +44,7 @@ else
     <!-- Code Example -->
     <div class="panel mb-3">
         <h4>💻 Code Example</h4>
+        <div style="font-size:0.75rem;color:var(--color-muted);margin-bottom:4px;">C# Example</div>
         <pre class="code-block"><code>@_lesson.CodeExample</code></pre>
     </div>
 
@@ -67,7 +70,9 @@ else
     @if (!string.IsNullOrEmpty(_message))
     {
         <div class="alert alert-success mt-3">@_message</div>
+        <div class="tutorial-callout" style="border-left-color:var(--color-teal);"><span class="teal-text">&#x2728; Lesson complete! Keep going to prepare for battle.</span></div>
     }
+    </div>
 }
 
 @code {

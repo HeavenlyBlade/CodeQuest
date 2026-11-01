@@ -51,25 +51,6 @@ namespace CodeQuest.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Players",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "INTEGER", nullable: false)
-                        .Annotation("Sqlite:Autoincrement", true),
-                    UserId = table.Column<string>(type: "TEXT", nullable: false),
-                    HeroName = table.Column<string>(type: "TEXT", nullable: false),
-                    Level = table.Column<int>(type: "INTEGER", nullable: false),
-                    Xp = table.Column<int>(type: "INTEGER", nullable: false),
-                    Gold = table.Column<int>(type: "INTEGER", nullable: false),
-                    CurrentHp = table.Column<int>(type: "INTEGER", nullable: false),
-                    MaxHp = table.Column<int>(type: "INTEGER", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Players", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Zones",
                 columns: table => new
                 {
@@ -191,21 +172,41 @@ namespace CodeQuest.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Players",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "INTEGER", nullable: false)
+                        .Annotation("Sqlite:Autoincrement", true),
+                    UserId = table.Column<string>(type: "TEXT", nullable: false),
+                    HeroName = table.Column<string>(type: "TEXT", nullable: false),
+                    Level = table.Column<int>(type: "INTEGER", nullable: false),
+                    Xp = table.Column<int>(type: "INTEGER", nullable: false),
+                    Gold = table.Column<int>(type: "INTEGER", nullable: false),
+                    CurrentHp = table.Column<int>(type: "INTEGER", nullable: false),
+                    MaxHp = table.Column<int>(type: "INTEGER", nullable: false),
+                    TutorialComplete = table.Column<bool>(type: "INTEGER", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Players", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Challenges",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false),
                     MonsterName = table.Column<string>(type: "TEXT", nullable: false),
                     MonsterHp = table.Column<int>(type: "INTEGER", nullable: false),
                     MonsterAttack = table.Column<int>(type: "INTEGER", nullable: false),
-                    IsBoss = table.Column<bool>(type: "INTEGER", nullable: false),
+                    QuestionsToDefeat = table.Column<int>(type: "INTEGER", nullable: false),
+                    Difficulty = table.Column<int>(type: "INTEGER", nullable: false),
                     XpReward = table.Column<int>(type: "INTEGER", nullable: false),
                     GoldReward = table.Column<int>(type: "INTEGER", nullable: false),
-                    Difficulty = table.Column<int>(type: "INTEGER", nullable: false),
-                    QuestionsToDefeat = table.Column<int>(type: "INTEGER", nullable: false),
-                    OrderNumber = table.Column<int>(type: "INTEGER", nullable: false),
-                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false)
+                    IsBoss = table.Column<bool>(type: "INTEGER", nullable: false),
+                    OrderNumber = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -224,12 +225,12 @@ namespace CodeQuest.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false),
                     Title = table.Column<string>(type: "TEXT", nullable: false),
                     Story = table.Column<string>(type: "TEXT", nullable: false),
                     Explanation = table.Column<string>(type: "TEXT", nullable: false),
                     CodeExample = table.Column<string>(type: "TEXT", nullable: false),
-                    OrderNumber = table.Column<int>(type: "INTEGER", nullable: false),
-                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false)
+                    OrderNumber = table.Column<int>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -248,6 +249,7 @@ namespace CodeQuest.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
+                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false),
                     Text = table.Column<string>(type: "TEXT", nullable: false),
                     Type = table.Column<int>(type: "INTEGER", nullable: false),
                     Difficulty = table.Column<int>(type: "INTEGER", nullable: false),
@@ -256,10 +258,9 @@ namespace CodeQuest.Migrations
                     ChoiceC = table.Column<string>(type: "TEXT", nullable: true),
                     ChoiceD = table.Column<string>(type: "TEXT", nullable: true),
                     CorrectAnswer = table.Column<string>(type: "TEXT", nullable: false),
-                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false),
                     StarterCode = table.Column<string>(type: "TEXT", nullable: true),
                     TestCasesJson = table.Column<string>(type: "TEXT", nullable: true),
-                    ZoneId = table.Column<int>(type: "INTEGER", nullable: false)
+                    IsActive = table.Column<bool>(type: "INTEGER", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -282,8 +283,8 @@ namespace CodeQuest.Migrations
                     ChallengeId = table.Column<int>(type: "INTEGER", nullable: false),
                     MonsterHpLeft = table.Column<int>(type: "INTEGER", nullable: false),
                     Status = table.Column<int>(type: "INTEGER", nullable: false),
-                    CurrentQuestionId = table.Column<int>(type: "INTEGER", nullable: true),
-                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
+                    StartedAt = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CurrentQuestionId = table.Column<int>(type: "INTEGER", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -308,8 +309,8 @@ namespace CodeQuest.Migrations
                 {
                     Id = table.Column<int>(type: "INTEGER", nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    PlayerId = table.Column<int>(type: "INTEGER", nullable: false),
                     LessonId = table.Column<int>(type: "INTEGER", nullable: false),
+                    PlayerId = table.Column<int>(type: "INTEGER", nullable: false),
                     CompletedAt = table.Column<DateTime>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
@@ -448,18 +449,18 @@ namespace CodeQuest.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(name: "Attempts");
+            migrationBuilder.DropTable(name: "Battles");
+            migrationBuilder.DropTable(name: "LessonProgresses");
             migrationBuilder.DropTable(name: "AspNetRoleClaims");
             migrationBuilder.DropTable(name: "AspNetUserClaims");
             migrationBuilder.DropTable(name: "AspNetUserLogins");
             migrationBuilder.DropTable(name: "AspNetUserRoles");
             migrationBuilder.DropTable(name: "AspNetUserTokens");
-            migrationBuilder.DropTable(name: "LessonProgresses");
-            migrationBuilder.DropTable(name: "Battles");
             migrationBuilder.DropTable(name: "Questions");
             migrationBuilder.DropTable(name: "Lessons");
             migrationBuilder.DropTable(name: "Challenges");
-            migrationBuilder.DropTable(name: "Zones");
             migrationBuilder.DropTable(name: "Players");
+            migrationBuilder.DropTable(name: "Zones");
             migrationBuilder.DropTable(name: "AspNetRoles");
             migrationBuilder.DropTable(name: "AspNetUsers");
         }

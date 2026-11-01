@@ -10,4 +10,5 @@ public class Player
     public int Gold { get; set; } = 0;
     public int CurrentHp { get; set; } = 100;
     public int MaxHp { get; set; } = 100;
+    public bool TutorialComplete { get; set; } = false;
 }

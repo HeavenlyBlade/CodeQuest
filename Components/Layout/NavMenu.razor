@@ -12,6 +12,10 @@
     <nav class="nav flex-column">
         <AuthorizeView>
             <Authorized>
+                <div class="px-3 py-2 mb-2" style="border-bottom:1px solid rgba(233,69,96,0.2);">
+                    <div style="font-size:0.75rem;color:var(--color-muted);">Logged in as</div>
+                    <div style="font-size:0.85rem;color:var(--color-teal);word-break:break-all;">@context.User.Identity?.Name</div>
+                </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/map" Match="NavLinkMatch.All">
                         🗺️ World Map
@@ -20,6 +24,11 @@
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/leaderboard">
                         🏆 Leaderboard
+                    </NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="tutorial">
+                        <span aria-hidden="true">&#x1F4D6;</span> How to Play
                     </NavLink>
                 </div>
                 <AuthorizeView Roles="Teacher" Context="teacherCtx">

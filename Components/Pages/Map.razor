@@ -20,25 +20,32 @@ else if (_player == null)
 }
 else
 {
-    <div class="panel mb-4">
-        <h2>⚔️ @_player.HeroName</h2>
-        <div class="row g-2 mt-1">
-            <div class="col-md-4">
-                <small class="text-muted">Level @_player.Level</small>
-                <div class="hp-bar mt-1">
-                    <div class="hp-bar-fill" style="width:@HpPercent%"></div>
+    <div class="panel mb-4 animate-fade-in-up">
+        <div class="d-flex gap-3 align-items-start">
+            <div class="hero-avatar">&#x2694;&#xFE0F;</div>
+            <div style="flex:1;">
+                <h1 style="font-family:var(--font-heading)">⚔️ @_player.HeroName</h1>
+                <div class="row g-2 mt-1">
+                    <div class="col-md-4">
+                        <small class="text-muted">Level @_player.Level</small>
+                        <div class="bar-label">HP</div>
+                        <div class="hp-bar mt-1">
+                            <div class="hp-bar-fill" style="width:@HpPercent%"></div>
+                        </div>
+                        <small>HP: @_player.CurrentHp / @_player.MaxHp</small>
+                    </div>
+                    <div class="col-md-4">
+                        <small class="text-muted">XP to next level</small>
+                        <div class="bar-label">XP / Level Up</div>
+                        <div class="hp-bar mt-1">
+                            <div class="hp-bar-fill xp-bar-fill" style="width:@XpPercent%"></div>
+                        </div>
+                        <small>@_player.Xp / @(_player.Level * 50) XP</small>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <span class="gold-text fs-5">🪙 @_player.Gold gold</span>
+                    </div>
                 </div>
-                <small>HP: @_player.CurrentHp / @_player.MaxHp</small>
-            </div>
-            <div class="col-md-4">
-                <small class="text-muted">XP to next level</small>
-                <div class="hp-bar mt-1">
-                    <div class="hp-bar-fill xp-bar-fill" style="width:@XpPercent%"></div>
-                </div>
-                <small>@_player.Xp / @(_player.Level * 50) XP</small>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <span class="gold-text fs-5">🪙 @_player.Gold gold</span>
             </div>
         </div>
     </div>
@@ -55,7 +62,7 @@ else
             @foreach (var zs in _zones)
             {
                 <div class="col-md-6">
-                    <div class="panel @(zs.IsUnlocked ? "" : "locked")">
+                    <div class="panel zone-card @(zs.IsUnlocked ? "" : "locked")">
                         <h4>
                             @(zs.IsUnlocked ? "🏔️" : "🔒") @zs.Zone.Name
                         </h4>
@@ -66,7 +73,7 @@ else
                         }
                         else
                         {
-                            <span class="text-muted small">Defeat the boss of the previous zone to unlock.</span>
+                            <span class="muted-text"><small>&#x1F512; Complete the previous zone to unlock</small></span>
                         }
                     </div>
                 </div>
@@ -99,6 +106,11 @@ else
         if (userId != null)
         {
             _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+            if (_player != null && !_player.TutorialComplete)
+            {
+                Nav.NavigateTo("/tutorial");
+                return;
+            }
             if (_player != null)
                 _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
         }

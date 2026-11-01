@@ -1,0 +1,121 @@
+@page "/tutorial"
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject NavigationManager Nav
+@inject GameService GameSvc
+@inject IHttpContextAccessor HttpCtx
+@using CodeQuest.Data
+@inject GameDbContext Db
+@using Microsoft.EntityFrameworkCore
+
+<PageTitle>Tutorial – CodeQuest</PageTitle>
+
+<div class="panel animate-fade-in-up" style="max-width:720px;margin:0 auto;">
+    <div class="tutorial-step-indicator">Step @_step of @TotalSteps</div>
+    <div class="tutorial-progress">
+        <div class="tutorial-progress-fill" style="width:@ProgressWidth;"></div>
+    </div>
+
+    @if (_step == 1)
+    {
+        <h2>Welcome, Hero!</h2>
+        <p>CodeQuest is an RPG for learning C#. You read story-based lessons, then battle monsters by answering coding questions. Correct answers deal damage to the monster. Wrong answers let the monster attack you. Defeat the zone boss to unlock the next zone.</p>
+        <pre style="color:var(--color-accent);font-family:'Consolas',monospace;font-size:clamp(0.45rem,1.2vw,0.7rem);line-height:1.3;">
+   ___         _     ___             _  
+  / __|___  __| |___/ _ \ _  _ ___ __| |
+ | (__/ _ \/ _` / -_) (_) | || / -_|_-&lt; _|
+  \___\___/\__,_\___|\__\_\_,_\___/__/\__|</pre>
+    }
+
+    @if (_step == 2)
+    {
+        <h2>Zones and Lessons</h2>
+        <p>The world is divided into Zones each focused on one C# topic. Every Zone has ordered Lessons you read first then Monsters you fight. You must finish all lessons before any monster unlocks.</p>
+        <div class="tutorial-diagram">Zone: Variables Valley
+  [done] Lesson 1 - The Storage Chests
+  [done] Lesson 2 - The Goblin's Tricks
+  [done] Lesson 3 - The Dragon's Riddles
+  v-- All lessons complete
+  Monster 1: Slime (Easy)
+  Monster 2: Goblin (Medium)
+  Monster 3: Variable Dragon - BOSS (Hard)</div>
+    }
+
+    @if (_step == 3)
+    {
+        <h2>How Battles Work</h2>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h5>Monster Side</h5>
+                <p>Each correct answer deals damage to the monster. The amount equals MonsterHP divided by the number of questions needed to win. Enough correct answers defeats it.</p>
+            </div>
+            <div class="col-md-6">
+                <h5>Hero Side</h5>
+                <p>Each wrong answer lets the monster attack you. If your HP hits 0 you lose the battle but you respawn at full health and can retry immediately.</p>
+            </div>
+        </div>
+        <p>Questions come in three types: Multiple Choice (pick A B C or D), Predict the Output (type the exact printed value), and Write Code (write C# code - advanced).</p>
+    }
+
+    @if (_step == 4)
+    {
+        <h2>Variables Valley Awaits</h2>
+        <p>Your first zone is Variables Valley. Start with Lesson 1 The Storage Chests. Read the story, read the explanation, look at the code example, then click Finish Lesson. The monsters will be waiting when you are done.</p>
+        <div class="tutorial-callout"><strong>Tip:</strong> You can revisit lessons at any time. There is no penalty for re-reading.</div>
+    }
+
+    @if (_step == 5)
+    {
+        <h2>You Are Ready, Hero!</h2>
+        <p>Read carefully, think before you answer, and do not give up after a loss. Every mistake teaches you something new.</p>
+        <div class="mb-3">
+            <span class="difficulty-badge badge-easy">Easy - Slime</span>
+            <span class="difficulty-badge badge-medium">Medium - Goblin</span>
+            <span class="difficulty-badge badge-hard">Hard - Variable Dragon (BOSS)</span>
+        </div>
+        <button class="btn-fantasy" @onclick="FinishTutorial" disabled="@_saving">
+            @(_saving ? "Saving..." : "Start Your Quest!")
+        </button>
+    }
+
+    <div class="d-flex gap-2 mt-4">
+        @if (_step > 1)
+        {
+            <button class="btn-secondary-fantasy" @onclick="Back">← Back</button>
+        }
+        @if (_step < TotalSteps)
+        {
+            <button class="btn-fantasy" @onclick="Next">Next →</button>
+        }
+    </div>
+</div>
+
+@code {
+    private int _step = 1;
+    private const int TotalSteps = 5;
+    private Player? _player;
+    private bool _saving = false;
+    private string ProgressWidth => $"{(_step * 100) / TotalSteps}%";
+
+    private void Next() { if (_step < TotalSteps) _step++; }
+    private void Back() { if (_step > 1) _step--; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var httpContext = HttpCtx.HttpContext;
+        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (userId != null)
+        {
+            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+        }
+    }
+
+    private async Task FinishTutorial()
+    {
+        if (_player == null || _saving) return;
+        _saving = true;
+        await GameSvc.CompleteTutorialAsync(_player.Id);
+        Nav.NavigateTo("/map");
+    }
+}

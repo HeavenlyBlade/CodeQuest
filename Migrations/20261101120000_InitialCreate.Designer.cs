@@ -18,7 +18,7 @@ namespace CodeQuest.Migrations
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.14");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.0");
 
             modelBuilder.Entity("CodeQuest.Models.Attempt", b =>
                 {
@@ -214,6 +214,9 @@ namespace CodeQuest.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("MaxHp")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("TutorialComplete")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("UserId")
@@ -572,29 +575,12 @@ namespace CodeQuest.Migrations
             modelBuilder.Entity("CodeQuest.Models.Question", b =>
                 {
                     b.HasOne("CodeQuest.Models.Zone", "Zone")
-                        .WithMany("Questions")
+                        .WithMany()
                         .HasForeignKey("ZoneId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Zone");
-                });
-
-            modelBuilder.Entity("CodeQuest.Models.Zone", b =>
-                {
-                    b.Navigation("Challenges");
-                    b.Navigation("Lessons");
-                    b.Navigation("Questions");
-                });
-
-            modelBuilder.Entity("CodeQuest.Models.Battle", b =>
-                {
-                    b.Navigation("Attempts");
-                });
-
-            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
-                {
-                    b.ToTable("AspNetRoles");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -646,6 +632,17 @@ namespace CodeQuest.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("CodeQuest.Models.Battle", b =>
+                {
+                    b.Navigation("Attempts");
+                });
+
+            modelBuilder.Entity("CodeQuest.Models.Zone", b =>
+                {
+                    b.Navigation("Challenges");
+                    b.Navigation("Lessons");
                 });
 #pragma warning restore 612, 618
         }

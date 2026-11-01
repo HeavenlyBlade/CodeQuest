@@ -20,7 +20,7 @@ else if (_zone == null)
 }
 else
 {
-    <div class="panel mb-4">
+    <div class="panel mb-4 animate-fade-in-up">
         <h2>🏔️ @_zone.Name</h2>
         <p>@_zone.Description</p>
         <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
@@ -39,7 +39,7 @@ else
                 @foreach (var lesson in _lessons)
                 {
                     bool done = _completedLessonIds.Contains(lesson.Id);
-                    <li class="mb-2 d-flex align-items-center gap-2">
+                    <li class="mb-2 d-flex align-items-center gap-2" style="@(done ? "border-left:2px solid var(--color-teal);padding-left:0.5rem;" : "")">
                         <span>@(done ? "✅" : "📜")</span>
                         <a href="/lesson/@lesson.Id">@lesson.Title</a>
                         @if (done) { <span class="text-success small">Completed</span> }
@@ -62,7 +62,11 @@ else
                 @foreach (var ms in _monsters)
                 {
                     <div class="col-md-4">
-                        <div class="panel @(ms.IsUnlocked ? "" : "locked")">
+                        <div class="panel monster-card @(ms.IsUnlocked ? "" : "locked")">
+                            @if (ms.Challenge.IsBoss)
+                            {
+                                <div class="boss-crown">&#x1F451;</div>
+                            }
                             <h5>@(ms.Challenge.IsBoss ? "👑" : "👾") @ms.Challenge.MonsterName</h5>
                             <p class="small">
                                 HP: @ms.Challenge.MonsterHp | ATK: @ms.Challenge.MonsterAttack<br />
@@ -71,7 +75,7 @@ else
                             </p>
                             @if (ms.IsUnlocked)
                             {
-                                <a href="/battle/@ms.Challenge.Id" class="btn-fantasy btn-sm">Fight!</a>
+                                <a href="/battle/@ms.Challenge.Id" class="btn-fantasy btn-sm">&#x2694;&#xFE0F; Fight!</a>
                             }
                             else
                             {

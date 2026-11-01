@@ -441,6 +441,19 @@ public class GameService
         return testCases.Count > 0; // no test cases = not correct
     }
 
+    // -------------------------------------------------------------------------
+    // Tutorial
+    // -------------------------------------------------------------------------
+
+    /// <summary>Marks the tutorial as complete for the given player.</summary>
+    public async Task CompleteTutorialAsync(int playerId)
+    {
+        var player = await _db.Players.FindAsync(playerId);
+        if (player == null) return;
+        player.TutorialComplete = true;
+        await _db.SaveChangesAsync();
+    }
+
     /// <summary>
     /// Runs student code against a question's test cases WITHOUT recording an attempt.
     /// Used by the "Run Code" button in BattlePage for feedback before submitting.

@@ -7,11 +7,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register – CodeQuest</title>
     <link rel="stylesheet" href="/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/app.css" />
 </head>
 <body>
 <div class="container d-flex justify-content-center align-items-center" style="min-height:100vh">
-    <div class="panel" style="width:100%;max-width:420px">
+    <div style="width:100%;max-width:420px">
+    <div class="text-center mb-4">
+        <h2 style="font-family:'Cinzel',serif;color:#e94560;">&#x2694;&#xFE0F; CodeQuest</h2>
+        <p style="color:#8a8a9a;">Learn C# Through Adventure</p>
+    </div>
+    <div class="panel">
         <h2 class="text-center mb-4">🧙 Create Your Hero</h2>
 
         @if (!string.IsNullOrEmpty(Model.ErrorMessage))
@@ -24,11 +32,11 @@
             <div class="mb-3">
                 <label class="form-label">Hero Name</label>
                 <input type="text" name="HeroName" class="form-control" required maxlength="50"
-                       value="@Model.HeroName" />
+                       value="@Model.HeroName" autocomplete="username" />
             </div>
             <div class="mb-3">
                 <label class="form-label">Email</label>
-                <input type="email" name="Email" class="form-control" required autocomplete="username"
+                <input type="email" name="Email" class="form-control" required autocomplete="email"
                        value="@Model.Email" />
             </div>
             <div class="mb-3">
@@ -41,6 +49,7 @@
         <p class="text-center mt-3">
             Already a hero? <a href="/login">Login here</a>
         </p>
+    </div>
     </div>
 </div>
 </body>

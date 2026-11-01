@@ -8,7 +8,7 @@
 
 <div class="panel">
     <h2>🏆 Leaderboard</h2>
-    <p class="text-muted small">Top 10 heroes</p>
+    <p class="muted-text mb-3">Top 10 heroes ranked by level and experience</p>
 
     @if (_loading)
     {
@@ -20,6 +20,7 @@
     }
     else
     {
+        <div class="table-responsive">
         <table class="table table-dark table-striped mt-3">
             <thead>
                 <tr>
@@ -34,8 +35,14 @@
                 @for (int i = 0; i < _players.Count; i++)
                 {
                     var p = _players[i];
+                    int rank = i + 1;
                     <tr>
-                        <td>@(i + 1)</td>
+                        <td>
+                            @if (rank == 1) { <span class="rank-gold">&#x1F947;</span> }
+                            else if (rank == 2) { <span class="rank-silver">&#x1F948;</span> }
+                            else if (rank == 3) { <span class="rank-bronze">&#x1F949;</span> }
+                            else { @rank }
+                        </td>
                         <td>@p.HeroName</td>
                         <td>@p.Level</td>
                         <td>@p.Xp</td>
@@ -44,6 +51,7 @@
                 }
             </tbody>
         </table>
+        </div>
     }
 
     <a href="/map" class="btn btn-outline-secondary mt-3">← Back to Map</a>

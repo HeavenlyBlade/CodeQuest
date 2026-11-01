@@ -29,7 +29,7 @@ else
     <!-- Battle status: Victory -->
     @if (_battle.Status == BattleStatus.Won)
     {
-        <div class="panel text-center">
+        <div class="panel text-center animate-scale-in">
             <h2>🏆 Victory!</h2>
             <p>You defeated <strong>@_challenge?.MonsterName</strong>!</p>
             @if (_lastResult != null && _lastResult.XpGained > 0)
@@ -52,7 +52,7 @@ else
     <!-- Battle status: Defeat -->
     else if (_battle.Status == BattleStatus.Lost)
     {
-        <div class="panel text-center">
+        <div class="panel text-center animate-fade-in-up">
             <h2>💀 Defeated!</h2>
             @if (_noQuestions)
             {
@@ -72,16 +72,19 @@ else
         <!-- Monster HUD -->
         <div class="panel mb-3">
             <h3>👾 @_challenge?.MonsterName @(_challenge?.IsBoss == true ? "👑" : "")</h3>
-            <small class="text-muted">Monster HP</small>
+            <div class="bar-label">Monster HP</div>
             <div class="hp-bar mt-1 mb-1">
                 <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
             </div>
             <small>@_battle.MonsterHpLeft / @_challenge?.MonsterHp HP</small>
         </div>
 
+        <div class="battle-vs">&#8212; VS &#8212;</div>
+
         <!-- Player HUD -->
         <div class="panel mb-3">
             <h5>🧙 @_player.HeroName</h5>
+            <div class="bar-label">Your HP</div>
             <div class="hp-bar mt-1 mb-1">
                 <div class="hp-bar-fill" style="width:@PlayerHpPercent%"></div>
             </div>
@@ -140,6 +143,7 @@ else
                     <div class="mt-2">
                         @foreach (var (letter, text) in GetChoices())
                         {
+                            <div style="background:rgba(255,255,255,0.03);border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.4rem;border:1px solid rgba(255,255,255,0.06);">
                             <div class="form-check mb-2">
                                 <input class="form-check-input" type="radio" name="mcAnswer"
                                        id="choice_@letter" value="@letter"
@@ -148,6 +152,7 @@ else
                                 <label class="form-check-label" for="choice_@letter">
                                     <strong>@letter:</strong> @text
                                 </label>
+                            </div>
                             </div>
                         }
                     </div>
@@ -187,7 +192,7 @@ else
                 }
 
                 <button class="btn-fantasy mt-3" @onclick="SubmitAnswer" disabled="@_submitting">
-                    @(_submitting ? "Checking..." : "Submit Answer")
+                    @(_submitting ? "Checking..." : "&#x2694;&#xFE0F; Submit Answer")
                 </button>
             </div>
         }
