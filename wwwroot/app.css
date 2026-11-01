@@ -204,3 +204,34 @@ a:hover { color: var(--color-accent); }
 ::-webkit-scrollbar-track        { background: var(--color-bg); }
 ::-webkit-scrollbar-thumb        { background: rgba(233,69,96,0.4); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover  { background: var(--color-accent); }
+
+/* ── Blazor error UI (global — not scoped to any layout) ─── */
+#blazor-error-ui {
+    color-scheme: light only;
+    background: #1a1a2e;
+    border-top: 1px solid rgba(233, 69, 96, 0.4);
+    bottom: 0;
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.4);
+    box-sizing: border-box;
+    display: none;          /* hidden by default; Blazor JS sets display:block on error */
+    left: 0;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    position: fixed;
+    width: 100%;
+    z-index: 1000;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+}
+#blazor-error-ui .reload {
+    color: var(--color-teal);
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+#blazor-error-ui .dismiss {
+    cursor: pointer;
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    color: var(--color-muted);
+}

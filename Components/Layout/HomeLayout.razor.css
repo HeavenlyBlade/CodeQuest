@@ -1,0 +1,60 @@
+/* Scoped styles for the landing page layout */
+
+.home-layout {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.home-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2.5rem;
+    height: 3.5rem;
+    background: var(--color-panel);
+    border-bottom: 1px solid rgba(233, 69, 96, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.home-brand {
+    font-family: var(--font-heading);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-text) !important;
+    text-decoration: none;
+    letter-spacing: 0.05em;
+}
+
+.home-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.home-nav a {
+    font-size: 0.9rem;
+    color: var(--color-muted);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.home-nav a:hover {
+    color: var(--color-teal);
+}
+
+/* btn-fantasy inside nav inherits global style — just tighten hover color override */
+.home-nav a.btn-fantasy,
+.home-nav a.btn-fantasy:hover {
+    color: #fff;
+}
+
+.home-main {
+    flex: 1;
+    max-width: 960px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+}

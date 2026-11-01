@@ -1,0 +1,16 @@
+@inherits LayoutComponentBase
+
+<!-- Full-width layout used by the landing page only (no sidebar) -->
+<div class="home-layout">
+    <header class="home-header">
+        <a class="home-brand" href="/">&#x2694;&#xFE0F; CodeQuest</a>
+        <nav class="home-nav">
+            <a href="/login">Login</a>
+            <a href="/register" class="btn-fantasy" style="padding:0.35rem 1rem;font-size:0.85rem;">Register</a>
+        </nav>
+    </header>
+
+    <main class="home-main">
+        @Body
+    </main>
+</div>
