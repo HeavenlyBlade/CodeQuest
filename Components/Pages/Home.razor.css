@@ -1,24 +1,31 @@
 /* Scoped to Home.razor only */
 
-/* ASCII logo rendered as SVG so font scaling never distorts it */
 .home-ascii-wrap {
     display: flex;
     justify-content: center;
     margin-bottom: 0.75rem;
+    overflow-x: auto;
 }
 
-.home-ascii-svg {
-    width: clamp(260px, 55vw, 480px);
-    height: auto;
-    overflow: visible;
-}
-
-.home-ascii-svg text {
-    font-family: 'Consolas', 'Courier New', monospace;
-    font-size: 11px;
-    fill: var(--color-accent);
+/* Force Courier New monospace at a fixed size — no font inheritance allowed.
+   All four lines of the ASCII art use the exact same character width this way. */
+.home-ascii {
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: clamp(11px, 2vw, 15px);
+    line-height: 1.4;
+    color: var(--color-accent);
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
     white-space: pre;
+    text-align: left;
+    display: inline-block;
     letter-spacing: 0;
+    /* Block any inherited font that could misalign characters */
+    font-weight: normal;
+    font-style: normal;
+    font-variant: normal;
 }
 
 .home-tagline {
