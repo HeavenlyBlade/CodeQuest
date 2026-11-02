@@ -84,6 +84,11 @@ app.MapStaticAssets();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
+
+// Health check endpoint — responds to both GET and HEAD
+// UptimeRobot free tier uses HEAD; this handles it without a 405
+app.MapMethods("/health", new[] { "GET", "HEAD" }, () => Results.Ok("healthy"));
+
 app.MapRazorPages();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
