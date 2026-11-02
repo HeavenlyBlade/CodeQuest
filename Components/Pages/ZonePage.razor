@@ -12,7 +12,7 @@
 
 @if (_loading)
 {
-    <div class="text-center mt-5"><p>&#x2694;&#xFE0F; Loading zone map...</p></div>
+    <div class="text-center mt-5"><p>Loading zone map...</p></div>
 }
 else if (_zone == null)
 {
@@ -30,7 +30,7 @@ else
         {
             <div class="text-end">
                 <div style="font-size:0.85rem;color:var(--color-muted);">@_player.HeroName</div>
-                <div class="gold-text" style="font-size:0.9rem;">&#x1FA99; @_player.Gold &nbsp; Lv.@_player.Level</div>
+                <div class="gold-text" style="font-size:0.9rem;">@_player.Gold gold &nbsp; Lv.@_player.Level</div>
             </div>
         }
     </div>
@@ -42,7 +42,7 @@ else
         <div class="map-row" style="justify-content:center;margin-bottom:1rem;">
             <div class="map-node coming-soon" title="Coming Soon">
                 <div class="map-node-badge" style="color:var(--color-muted);">Chapter II</div>
-                <span>&#x1F512;</span>
+                <span>Soon</span>
             </div>
         </div>
         <div class="map-connector" style="margin:0 auto;width:3px;height:24px;"></div>
@@ -98,25 +98,25 @@ else
             <div class="map-modal" @onclick:stopPropagation>
                 <button class="map-modal-close" @onclick="CloseModal">&#x2715;</button>
                 <div class="mb-1" style="font-size:0.75rem;color:var(--color-muted);">
-                    @(_modalNode.IsLesson ? "Lesson" : ("Battle" + (_modalNode.IsBoss ? " &#x1F451; BOSS" : "")))
+                    @(_modalNode.IsLesson ? "Lesson" : ("Battle" + (_modalNode.IsBoss ? " BOSS" : "")))
                     &nbsp;&#x2022;&nbsp; Node @_modalNode.Number
                 </div>
-                <h4 style="margin-bottom:0.5rem;">@(_modalNode.IsLesson ? "&#x1F4D6;" : "&#x2694;&#xFE0F;") @_modalNode.Title</h4>
+                <h4 style="margin-bottom:0.5rem;">@_modalNode.Title</h4>
                 <p class="muted-text" style="font-size:0.9rem;margin-bottom:1.25rem;">@_modalNode.Description</p>
                 @if (_modalNode.State == NodeState.Completed)
                 {
-                    <span class="teal-text small">&#x2705; Completed</span>
+                    <span class="teal-text small">Completed</span>
                     <a href="@(_modalNode.IsLesson ? $"/lesson/{_modalNode.EntityId}" : $"/battle/{_modalNode.EntityId}")"
                        class="btn-secondary-fantasy ms-3">Review</a>
                 }
                 else if (_modalNode.State == NodeState.Current)
                 {
                     <a href="@(_modalNode.IsLesson ? $"/lesson/{_modalNode.EntityId}" : $"/battle/{_modalNode.EntityId}")"
-                       class="btn-fantasy">@(_modalNode.IsLesson ? "&#x1F4D6; Start Lesson" : "&#x2694;&#xFE0F; Fight!")</a>
+                       class="btn-fantasy">@(_modalNode.IsLesson ? "Start Lesson" : "Fight!")</a>
                 }
                 else
                 {
-                    <span class="muted-text small">&#x1F512; Complete previous steps to unlock</span>
+                    <span class="muted-text small">Locked — Complete previous steps to unlock</span>
                 }
             </div>
         </div>

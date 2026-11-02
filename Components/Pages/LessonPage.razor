@@ -23,13 +23,13 @@ else
 {
     <div class="animate-fade-in-up">
     <div class="panel mb-3">
-        <h2>📖 @_lesson.Title</h2>
+        <h2>@_lesson.Title</h2>
         <a href="/zone/@_lesson.ZoneId" class="btn btn-outline-secondary btn-sm">← Back to Zone</a>
     </div>
 
     <!-- Story -->
     <div class="panel mb-3">
-        <h4>📜 Story</h4>
+        <h4>Story</h4>
         <div class="tutorial-callout">
             <h5 style="color:var(--color-gold);font-family:var(--font-heading);">Story</h5>
             <p>@_lesson.Story</p>
@@ -38,13 +38,13 @@ else
 
     <!-- Explanation -->
     <div class="panel mb-3">
-        <h4>🧠 Explanation</h4>
+        <h4>Explanation</h4>
         <p>@_lesson.Explanation</p>
     </div>
 
     <!-- Code Example -->
     <div class="panel mb-3">
-        <h4>💻 Code Example</h4>
+        <h4>Code Example</h4>
         <div style="font-size:0.75rem;color:var(--color-muted);margin-bottom:4px;">C# Example</div>
         <pre class="code-block"><code>@_lesson.CodeExample</code></pre>
     </div>
@@ -53,7 +53,7 @@ else
     <div class="panel d-flex gap-3 align-items-center flex-wrap">
         @if (_alreadyDone)
         {
-            <span class="text-success">✅ Already completed</span>
+            <span class="text-success">Already completed</span>
         }
         else
         {
@@ -72,14 +72,14 @@ else
     @if (!string.IsNullOrEmpty(_message))
     {
         <div class="alert alert-success mt-3">@_message</div>
-        <div class="tutorial-callout" style="border-left-color:var(--color-teal);"><span class="teal-text">&#x2728; Lesson complete! Keep going to prepare for battle.</span></div>
+        <div class="tutorial-callout" style="border-left-color:var(--color-teal);"><span class="teal-text">Lesson complete! Keep going to prepare for battle.</span></div>
 
         @* Fight button: show after lesson completion when paired monster exists *@
         @if (_pairedChallenge != null)
         {
             <div class="mt-3">
                 <a href="/battle/@_pairedChallenge.Id" class="btn-fantasy">
-                    ⚔️ Fight @_pairedChallenge.MonsterName!
+                    Fight @_pairedChallenge.MonsterName!
                 </a>
             </div>
         }

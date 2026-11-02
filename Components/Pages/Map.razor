@@ -23,9 +23,9 @@ else
 {
     <div class="panel mb-4 animate-fade-in-up">
         <div class="d-flex gap-3 align-items-start">
-            <div class="hero-avatar">&#x2694;&#xFE0F;</div>
+            <div class="hero-avatar"></div>
             <div style="flex:1;">
-                <h1 style="font-family:var(--font-heading)">⚔️ @_player.HeroName</h1>
+                <h1 style="font-family:var(--font-heading)">@_player.HeroName</h1>
                 <div class="row g-2 mt-1">
                     <div class="col-md-4">
                         <small class="text-muted">Level @_player.Level</small>
@@ -44,14 +44,14 @@ else
                         <small>@_player.Xp / @(_player.Level * 50) XP</small>
                     </div>
                     <div class="col-md-4 d-flex align-items-end">
-                        <span class="gold-text fs-5">🪙 @_player.Gold gold</span>
+                        <span class="gold-text fs-5">@_player.Gold gold</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <h3 class="mb-3">🗺️ World Map</h3>
+    <h3 class="mb-3">World Map</h3>
 
     @if (!_zones.Any())
     {
@@ -65,7 +65,7 @@ else
                 <div class="col-md-6">
                     <div class="panel zone-card @(zs.IsUnlocked ? "" : "locked")">
                         <h4>
-                            @(zs.IsUnlocked ? "🏔️" : "🔒") @zs.Zone.Name
+                            @zs.Zone.Name
                         </h4>
                         <p class="text-muted small">@zs.Zone.Description</p>
                         @if (zs.IsUnlocked)
@@ -74,7 +74,7 @@ else
                         }
                         else
                         {
-                            <span class="muted-text"><small>&#x1F512; Complete the previous zone to unlock</small></span>
+                            <span class="muted-text"><small>Locked — Complete the previous zone to unlock</small></span>
                         }
                     </div>
                 </div>
@@ -83,7 +83,7 @@ else
     }
 
     <div class="mt-4">
-        <a href="/leaderboard" class="btn btn-outline-secondary">🏆 Leaderboard</a>
+        <a href="/leaderboard" class="btn btn-outline-secondary">Leaderboard</a>
         <form method="post" action="/logout" class="d-inline ms-2">
             <input type="hidden" name="__RequestVerificationToken" value="" />
             <button type="submit" class="btn btn-outline-danger">Logout</button>

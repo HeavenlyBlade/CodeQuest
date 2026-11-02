@@ -8,7 +8,7 @@
 <PageTitle>Manage Monsters – CodeQuest</PageTitle>
 
 <div class="panel mb-3">
-    <h2>👾 Manage Monsters</h2>
+    <h2>Manage Monsters</h2>
     <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
 </div>
 
@@ -98,10 +98,10 @@
         {
             <div class="d-flex justify-content-between align-items-start">
                 <div>
-                    <strong>#@m.OrderNumber — @m.MonsterName @(m.IsBoss ? "👑 [BOSS]" : "")</strong>
+                    <strong>#@m.OrderNumber — @m.MonsterName @(m.IsBoss ? "[BOSS]" : "")</strong>
                     <p class="mb-0 small text-muted">
                         HP: @m.MonsterHp | ATK: @m.MonsterAttack | @m.Difficulty |
-                        Questions: @m.QuestionsToDefeat | Reward: @m.XpReward XP, @m.GoldReward 🪙
+                        Questions: @m.QuestionsToDefeat | Reward: @m.XpReward XP, @m.GoldReward gold
                     </p>
                 </div>
                 <button class="btn btn-outline-primary btn-sm" @onclick="() => StartEdit(m)">Edit</button>

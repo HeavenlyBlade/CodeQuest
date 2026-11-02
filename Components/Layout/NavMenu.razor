@@ -2,7 +2,7 @@
 
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/map">⚔️ CodeQuest</a>
+        <a class="navbar-brand" href="/map">CodeQuest</a>
     </div>
 </div>
 
@@ -18,35 +18,35 @@
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/map" Match="NavLinkMatch.All">
-                        🗺️ World Map
+                        World Map
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/leaderboard">
-                        🏆 Leaderboard
+                        Leaderboard
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="tutorial">
-                        <span aria-hidden="true">&#x1F4D6;</span> How to Play
+                        How to Play
                     </NavLink>
                 </div>
                 <AuthorizeView Roles="Teacher" Context="teacherCtx">
                     <Authorized>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/zones">📋 Zones</NavLink>
+                            <NavLink class="nav-link" href="/teacher/zones">Zones</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/lessons">📖 Lessons</NavLink>
+                            <NavLink class="nav-link" href="/teacher/lessons">Lessons</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/monsters">👾 Monsters</NavLink>
+                            <NavLink class="nav-link" href="/teacher/monsters">Monsters</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/questions">❓ Questions</NavLink>
+                            <NavLink class="nav-link" href="/teacher/questions">Questions</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/stats">📊 Stats</NavLink>
+                            <NavLink class="nav-link" href="/teacher/stats">Stats</NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
@@ -62,9 +62,9 @@
                             style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--color-muted);"
                             onclick="
                                 var muted = soundInterop.toggleMute();
-                                this.textContent = muted ? '🔇 Sounds Off' : '🔊 Sounds On';
+                                this.textContent = muted ? 'Sound Off' : 'Sound On';
                             ">
-                        🔊 Sounds On
+                        Sound On
                     </button>
                 </div>
             </Authorized>

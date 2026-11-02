@@ -14,7 +14,7 @@
 
 @if (_loading)
 {
-    <p class="text-center mt-5">⚔️ Preparing for battle...</p>
+    <p class="text-center mt-5">Preparing for battle...</p>
 }
 else if (_player == null)
 {
@@ -30,16 +30,16 @@ else
     @if (_battle.Status == BattleStatus.Won)
     {
         <div class="panel text-center animate-scale-in">
-            <h2>🏆 Victory!</h2>
+            <h2>Victory!</h2>
             <p>You defeated <strong>@_challenge?.MonsterName</strong>!</p>
             @if (_lastResult != null && _lastResult.XpGained > 0)
             {
                 <p class="gold-text">
-                    +@_lastResult.XpGained XP &nbsp; +@_lastResult.GoldGained 🪙
+                    +@_lastResult.XpGained XP &nbsp; +@_lastResult.GoldGained gold
                 </p>
                 @if (_lastResult.LeveledUp)
                 {
-                    <p class="text-success fs-5">🎉 Level Up! You are now Level @_lastResult.NewLevel!</p>
+                    <p class="text-success fs-5">Level Up! You are now Level @_lastResult.NewLevel!</p>
                 }
             }
             else
@@ -48,7 +48,7 @@ else
             }
             @if (_nextLesson != null)
             {
-                <a href="/lesson/@_nextLesson.Id" class="btn-fantasy mt-2">📖 Next: @_nextLesson.Title</a>
+                <a href="/lesson/@_nextLesson.Id" class="btn-fantasy mt-2">Next: @_nextLesson.Title</a>
             }
             <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-2">Back to Zone</a>
         </div>
@@ -70,7 +70,7 @@ else
             }
             else
             {
-                <h2>&#x1F480; Defeated!</h2>
+                <h2>Defeated!</h2>
                 <p>You were struck down by <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
                 <button class="btn-fantasy mt-3" @onclick="TryAgain">&#x1F504; Try Again</button>
                 <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-3">Back to Zone</a>
@@ -95,7 +95,7 @@ else
                     }
                 </div>
                 <div class="flex-fill">
-                    <h3 class="mb-1">@_challenge?.MonsterName @(_challenge?.IsBoss == true ? "👑" : "")</h3>
+                    <h3 class="mb-1">@_challenge?.MonsterName</h3>
                     <div class="bar-label">Monster HP</div>
                     <div class="hp-bar mt-1 mb-1">
                         <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
@@ -109,7 +109,7 @@ else
 
         <!-- Player HUD -->
         <div class="panel mb-3">
-            <h5>🧙 @_player.HeroName</h5>
+            <h5>@_player.HeroName</h5>
             <div class="bar-label">Your HP</div>
             <div class="hp-bar mt-1 mb-1">
                 <div class="hp-bar-fill" style="width:@PlayerHpPercent%"></div>
@@ -124,16 +124,16 @@ else
             <div class="panel mb-3">
                 @if (_lastResult.IsCorrect)
                 {
-                    <p class="text-success">✅ Correct! You dealt <strong>@_lastResult.DamageToMonster damage</strong> to the monster.</p>
+                    <p class="text-success"><span class="feedback-correct">Correct!</span> You dealt <strong>@_lastResult.DamageToMonster damage</strong> to the monster.</p>
                 }
                 else
                 {
-                    <p class="text-danger">❌ Wrong! The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you.</p>
+                    <p class="text-danger"><span class="feedback-wrong">Wrong!</span> The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you.</p>
                 }
 
                 @if (_currentQuestion?.Type == ChallengeType.WriteCode)
                 {
-                    <p>@(_lastResult.IsCorrect ? "✅ All test cases passed!" : "❌ One or more test cases failed.")</p>
+                    <p>@(_lastResult.IsCorrect ? "All test cases passed!" : "One or more test cases failed.")</p>
                     @if (_testOutput is not null)
                     {
                         <pre class="code-block" style="font-size:0.85rem;">@_testOutput</pre>
@@ -160,7 +160,7 @@ else
         {
             <!-- Question display -->
             <div class="panel mb-3">
-                <h5>❓ Question</h5>
+                <h5>Question</h5>
                 <p style="white-space:pre-wrap">@_currentQuestion.Text</p>
 
                 @if (_currentQuestion.Type == ChallengeType.MultipleChoice)

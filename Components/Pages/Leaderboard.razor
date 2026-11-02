@@ -7,7 +7,7 @@
 <PageTitle>Leaderboard – CodeQuest</PageTitle>
 
 <div class="panel">
-    <h2>🏆 Leaderboard</h2>
+    <h2>Leaderboard</h2>
     <p class="muted-text mb-3">Top 10 heroes ranked by level and experience</p>
 
     @if (_loading)
@@ -38,15 +38,15 @@
                     int rank = i + 1;
                     <tr>
                         <td>
-                            @if (rank == 1) { <span class="rank-gold">&#x1F947;</span> }
-                            else if (rank == 2) { <span class="rank-silver">&#x1F948;</span> }
-                            else if (rank == 3) { <span class="rank-bronze">&#x1F949;</span> }
+                            @if (rank == 1) { <span class="rank-gold">1</span> }
+                            else if (rank == 2) { <span class="rank-silver">2</span> }
+                            else if (rank == 3) { <span class="rank-bronze">3</span> }
                             else { @rank }
                         </td>
                         <td>@p.HeroName</td>
                         <td>@p.Level</td>
                         <td>@p.Xp</td>
-                        <td class="gold-text">@p.Gold 🪙</td>
+                        <td class="gold-text">@p.Gold gold</td>
                     </tr>
                 }
             </tbody>
