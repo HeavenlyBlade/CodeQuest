@@ -4,6 +4,7 @@
 @inject GameService GameSvc
 @inject NavigationManager Nav
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JS
 @using CodeQuest.Data
 @inject GameDbContext Db
 @using Microsoft.EntityFrameworkCore
@@ -115,5 +116,14 @@ else
                 _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
         }
         _loading = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Start map theme music
+            await JS.InvokeVoidAsync("soundInterop.startTheme", "/sounds/map-theme.mp3");
+        }
     }
 }

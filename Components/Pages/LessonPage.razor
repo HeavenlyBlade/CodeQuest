@@ -4,6 +4,7 @@
 @inject GameService GameSvc
 @inject NavigationManager Nav
 @inject IHttpContextAccessor HttpContextAccessor
+@inject IJSRuntime JS
 @using CodeQuest.Data
 @inject GameDbContext Db
 @using Microsoft.EntityFrameworkCore
@@ -135,5 +136,7 @@ else
         _alreadyDone = true;
         _message = "Lesson complete! Great work, hero.";
         _finishing = false;
+        // Play lesson complete sound
+        try { await JS.InvokeVoidAsync("soundInterop.play", "lesson-complete"); } catch { }
     }
 }

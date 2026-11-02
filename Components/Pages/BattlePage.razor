@@ -254,13 +254,20 @@ else
         : (int)((double)_player.CurrentHp / _player.MaxHp * 100);
 
     // Sprite lookup: checks if the monster name CONTAINS a known keyword (case-insensitive).
-    // This means "Valley Slime", "Mud Slime", "Data Slime" all use slime.gif automatically.
+    // This means "Valley Slime", "Cave Slime" etc. all use slime.gif automatically.
     // Add new sprite files to wwwroot/images/monsters/ and register their keyword here.
     private static readonly (string keyword, string path)[] _spriteKeywords =
     {
-        ("slime",   "/images/monsters/slime.gif"),
-        ("goblin",  "/images/monsters/goblin.gif"),
-        ("dragon",  "/images/monsters/variable-dragon.gif"),
+        ("slime",        "/images/monsters/slime.gif"),
+        ("goblin",       "/images/monsters/goblin.gif"),
+        ("troll",        "/images/monsters/stone-troll.gif"),
+        ("specter",      "/images/monsters/echo-specter.gif"),
+        ("wisp",         "/images/monsters/logic-wisp.gif"),
+        ("mimic",        "/images/monsters/cave-mimic.gif"),          // sprite pending upload
+        ("golem",        "/images/monsters/iron-golem.gif"),
+        ("doppelganger", "/images/monsters/shadow-doppelganger.gif"),
+        ("phantom",      "/images/monsters/twin-phantoms.gif"),
+        ("dragon",       "/images/monsters/variable-dragon.gif"),
     };
 
     private string? MonsterSpritePath =>
@@ -294,6 +301,25 @@ else
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            // Preload all battle sound effects
+            await JS.InvokeVoidAsync("soundInterop.preload", "battle-start",    "/sounds/battle-start.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "answer-correct",  "/sounds/answer-correct.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "answer-wrong",    "/sounds/answer-wrong.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "monster-hit",     "/sounds/monster-hit.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "player-hit",      "/sounds/player-hit.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "monster-defeat",  "/sounds/monster-defeat.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "player-defeat",   "/sounds/player-defeat.mp3");
+            await JS.InvokeVoidAsync("soundInterop.preload", "level-up",        "/sounds/level-up.mp3");
+
+            // Start battle theme music
+            await JS.InvokeVoidAsync("soundInterop.startTheme", "/sounds/battle-theme.mp3");
+
+            // Play battle-start one-shot
+            await JS.InvokeVoidAsync("soundInterop.play", "battle-start");
+        }
+
         // Initialize Monaco editor when a WriteCode question is displayed
         if (_currentQuestion?.Type == ChallengeType.WriteCode
             && _battle != null
@@ -366,17 +392,39 @@ else
         _lastResult = await GameSvc.SubmitAnswerAsync(_battle.Id, _player.Id, _answer);
         _showFeedback = true;
 
+        // Play answer sound effects
+        if (_lastResult.IsCorrect)
+        {
+            await JS.InvokeVoidAsync("soundInterop.play", "answer-correct");
+            await JS.InvokeVoidAsync("soundInterop.play", "monster-hit");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("soundInterop.play", "answer-wrong");
+            await JS.InvokeVoidAsync("soundInterop.play", "player-hit");
+        }
+
         // Refresh battle and player from DB for latest HP values
         _battle = await Db.Battles.FindAsync(_battle.Id) ?? _battle;
         _player = await Db.Players.FindAsync(_player.Id) ?? _player;
 
         // Load next lesson when battle is won, for the victory screen
         if (_battle.Status == BattleStatus.Won && _challenge != null)
+        {
             await LoadNextLessonAsync();
+            await JS.InvokeVoidAsync("soundInterop.stopTheme");
+            await JS.InvokeVoidAsync("soundInterop.play", "monster-defeat");
+            if (_lastResult.LeveledUp)
+                await JS.InvokeVoidAsync("soundInterop.play", "level-up");
+        }
 
         // Set defeat reason when battle is lost
         if (_battle.Status == BattleStatus.Lost)
+        {
             _defeatReason = _lastResult.DefeatReason == "retreat" ? "retreat" : "";
+            await JS.InvokeVoidAsync("soundInterop.stopTheme");
+            await JS.InvokeVoidAsync("soundInterop.play", "player-defeat");
+        }
 
         _submitting = false;
     }
@@ -456,6 +504,9 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        // Stop battle music when navigating away
+        try { await JS.InvokeVoidAsync("soundInterop.stopTheme"); } catch { }
+
         if (_battle != null && _currentQuestion?.Type == ChallengeType.WriteCode)
         {
             try { await JS.InvokeVoidAsync("monacoInterop.dispose", $"monaco-editor-{_battle.Id}"); }

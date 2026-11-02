@@ -56,6 +56,17 @@
                         <button type="submit" class="btn btn-outline-danger btn-sm w-100">Logout</button>
                     </form>
                 </div>
+                <!-- Mute toggle button -->
+                <div class="nav-item px-3 mt-2">
+                    <button class="btn btn-sm w-100"
+                            style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--color-muted);"
+                            onclick="
+                                var muted = soundInterop.toggleMute();
+                                this.textContent = muted ? '🔇 Sounds Off' : '🔊 Sounds On';
+                            ">
+                        🔊 Sounds On
+                    </button>
+                </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
