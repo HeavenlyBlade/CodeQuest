@@ -11,7 +11,7 @@
    All four lines of the ASCII art use the exact same character width this way. */
 .home-ascii {
     font-family: 'Courier New', Courier, monospace !important;
-    font-size: clamp(11px, 2vw, 15px);
+    font-size: clamp(9px, 1.6vw, 13px);
     line-height: 1.4;
     /* Bright white so it stands out against any video frame */
     color: #ffffff;
