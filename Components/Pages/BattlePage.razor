@@ -59,12 +59,12 @@ else
         <div class="panel text-center animate-fade-in-up">
             @if (_defeatReason == "retreat")
             {
-                <h2>&#x1F6AB; Retreat!</h2>
+                <h2>Retreat!</h2>
                 <p>You can't defeat <strong>@_challenge?.MonsterName</strong> as you are now.</p>
                 <p class="muted-text">Try to re-learn the lesson and come back stronger.</p>
                 @if (_challenge?.LessonId != null)
                 {
-                    <a href="/lesson/@_challenge.LessonId" class="btn-fantasy mt-3">&#x1F4D6; Re-learn the Lesson</a>
+                    <a href="/lesson/@_challenge.LessonId" class="btn-fantasy mt-3">Re-learn the Lesson</a>
                 }
                 <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-3">Back to Zone</a>
             }
@@ -72,7 +72,7 @@ else
             {
                 <h2>Defeated!</h2>
                 <p>You were struck down by <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
-                <button class="btn-fantasy mt-3" @onclick="TryAgain">&#x1F504; Try Again</button>
+                <button class="btn-fantasy mt-3" @onclick="TryAgain">Try Again</button>
                 <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-3">Back to Zone</a>
             }
         </div>
@@ -218,7 +218,7 @@ else
                 }
 
                 <button class="btn-fantasy mt-3" @onclick="SubmitAnswer" disabled="@_submitting">
-                    @(_submitting ? "Checking..." : "&#x2694;&#xFE0F; Submit Answer")
+                    @(_submitting ? "Checking..." : "Submit Answer")
                 </button>
             </div>
         }
