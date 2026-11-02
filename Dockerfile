@@ -14,12 +14,13 @@ RUN dotnet publish -c Release -o /app/publish --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
+# Install libgssapi to silence the Npgsql Kerberos warning
+RUN apt-get update && apt-get install -y libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+
 # Copy published output
 COPY --from=build /app/publish .
 
-# Render injects PORT — ASP.NET Core reads ASPNETCORE_URLS or we set it in Program.cs
-# Expose a default port for documentation (actual port comes from PORT env var)
+# Render injects PORT — actual port comes from PORT env var set in render.yaml
 EXPOSE 8080
 
-# Run the app
 ENTRYPOINT ["dotnet", "CodeQuest.dll"]

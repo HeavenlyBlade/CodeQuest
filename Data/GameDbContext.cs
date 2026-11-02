@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using CodeQuest.Models;
 
 namespace CodeQuest.Data;
 
-public class GameDbContext : IdentityDbContext<IdentityUser>
+public class GameDbContext : IdentityDbContext<IdentityUser>, IDataProtectionKeyContext
 {
     public GameDbContext(DbContextOptions<GameDbContext> options) : base(options) { }
 
@@ -17,6 +18,9 @@ public class GameDbContext : IdentityDbContext<IdentityUser>
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<Battle> Battles => Set<Battle>();
     public DbSet<Attempt> Attempts => Set<Attempt>();
+
+    // Stores ASP.NET Core DataProtection keys in the DB so they survive container restarts
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

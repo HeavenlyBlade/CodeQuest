@@ -1,6 +1,7 @@
 using CodeQuest.Components;
 using CodeQuest.Data;
 using CodeQuest.Services;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,11 @@ builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 // ---- Database ----
 builder.Services.AddDbContext<GameDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// ---- DataProtection — store keys in Neon DB so sessions survive container restarts ----
+builder.Services.AddDataProtection()
+    .PersistKeysToDbContext<GameDbContext>()
+    .SetApplicationName("CodeQuest");
 
 // ---- Identity ----
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
