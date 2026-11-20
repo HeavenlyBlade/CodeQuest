@@ -1,79 +1,87 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager Nav
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="/map">CodeQuest</a>
+<div class="top-row ps-3 navbar navbar-dark" style="border-bottom: 1px solid rgba(233,69,96,0.25);">
+    <div class="container-fluid d-flex align-items-center">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="/map" style="font-family:var(--font-heading);letter-spacing:0.05em;color:var(--color-accent);font-weight:700;">
+            <span style="font-size:1.15rem;">⚔️ CodeQuest</span>
+        </a>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<div class="nav-scrollable">
     <nav class="nav flex-column">
         <AuthorizeView>
             <Authorized>
-                <div class="px-3 py-2 mb-2" style="border-bottom:1px solid rgba(233,69,96,0.2);">
-                    <div style="font-size:0.75rem;color:var(--color-muted);">Logged in as</div>
-                    <div style="font-size:0.85rem;color:var(--color-teal);word-break:break-all;">@context.User.Identity?.Name</div>
+                <div class="px-3 py-2 mb-2 user-card-nav" style="border-bottom:1px solid rgba(233,69,96,0.2);background:rgba(22,33,62,0.4);">
+                    <div style="font-size:0.7rem;color:var(--color-muted);text-transform:uppercase;letter-spacing:0.06em;">Logged in as</div>
+                    <div style="font-size:0.85rem;color:var(--color-teal);word-break:break-all;font-weight:600;">@context.User.Identity?.Name</div>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/map" Match="NavLinkMatch.All">
-                        World Map
+                        <span class="nav-icon">🗺️</span> World Map
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="/leaderboard">
-                        Leaderboard
+                        <span class="nav-icon">🏆</span> Leaderboard
                     </NavLink>
                 </div>
                 <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="tutorial">
-                        How to Play
+                    <NavLink class="nav-link" href="/tutorial">
+                        <span class="nav-icon">📖</span> How to Play
                     </NavLink>
                 </div>
                 <AuthorizeView Roles="Teacher" Context="teacherCtx">
                     <Authorized>
-                        <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/zones">Zones</NavLink>
+                        <div class="nav-header px-3 mt-3 mb-1">
+                            <span style="font-size:0.7rem;color:var(--color-gold);text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">Teacher Portal</span>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/lessons">Lessons</NavLink>
+                            <NavLink class="nav-link" href="/teacher/zones"><span class="nav-icon">🏰</span> Zones</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/monsters">Monsters</NavLink>
+                            <NavLink class="nav-link" href="/teacher/lessons"><span class="nav-icon">📜</span> Lessons</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/questions">Questions</NavLink>
+                            <NavLink class="nav-link" href="/teacher/monsters"><span class="nav-icon">👾</span> Monsters</NavLink>
                         </div>
                         <div class="nav-item px-3">
-                            <NavLink class="nav-link" href="/teacher/stats">Stats</NavLink>
+                            <NavLink class="nav-link" href="/teacher/questions"><span class="nav-icon">❓</span> Questions</NavLink>
+                        </div>
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="/teacher/stats"><span class="nav-icon">📊</span> Stats</NavLink>
                         </div>
                     </Authorized>
                 </AuthorizeView>
                 <div class="nav-item px-3 mt-3">
                     <form method="post" action="/logout">
                         <input type="hidden" name="__RequestVerificationToken" value="" />
-                        <button type="submit" class="btn btn-outline-danger btn-sm w-100">Logout</button>
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100 d-flex align-items-center justify-content-center gap-1">
+                            <span>🚪</span> Logout
+                        </button>
                     </form>
                 </div>
                 <!-- Mute toggle button -->
                 <div class="nav-item px-3 mt-2">
-                    <button class="btn btn-sm w-100"
+                    <button class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
                             style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--color-muted);"
                             onclick="
                                 var muted = soundInterop.toggleMute();
-                                this.textContent = muted ? 'Sound Off' : 'Sound On';
+                                this.querySelector('.sound-label').textContent = muted ? 'Sound Off' : 'Sound On';
                             ">
-                        Sound On
+                        <span>🔊</span> <span class="sound-label">Sound On</span>
                     </button>
                 </div>
             </Authorized>
             <NotAuthorized>
                 <div class="nav-item px-3">
-                    <a class="nav-link" href="/login">Login</a>
+                    <a class="nav-link" href="/login"><span class="nav-icon">🔑</span> Login</a>
                 </div>
                 <div class="nav-item px-3">
-                    <a class="nav-link" href="/register">Register</a>
+                    <a class="nav-link" href="/register"><span class="nav-icon">✨</span> Register</a>
                 </div>
             </NotAuthorized>
         </AuthorizeView>

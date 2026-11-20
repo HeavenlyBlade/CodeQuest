@@ -45,6 +45,7 @@ builder.Services.AddHttpContextAccessor();
 
 // ---- Authorization ----
 builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
 
 // ---- Razor Pages (needed for SSR Login/Register/Logout) ----
 builder.Services.AddRazorPages();

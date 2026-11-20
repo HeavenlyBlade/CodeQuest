@@ -19,12 +19,12 @@
     <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs/loader.js"></script>
     <script src="js/monacoInterop.js"></script>
     <script src="js/soundInterop.js"></script>
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 
 <body>
     <CascadingAuthenticationState>
-        <Routes />
+        <Routes @rendermode="InteractiveServer" />
     </CascadingAuthenticationState>
     <div id="blazor-error-ui" data-nosnippet>
         An unhandled error has occurred.

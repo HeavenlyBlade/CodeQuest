@@ -1,6 +1,9 @@
 using CodeQuest.Data;
 using CodeQuest.Models;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using System.Text.Json;
 
 namespace CodeQuest.Services;
@@ -13,11 +16,51 @@ public class GameService
 {
     private readonly GameDbContext _db;
     private readonly CodeExecutionService _executor;
+    private readonly AuthenticationStateProvider? _authStateProvider;
+    private readonly IHttpContextAccessor? _httpContextAccessor;
 
-    public GameService(GameDbContext db, CodeExecutionService executor)
+    public GameService(
+        GameDbContext db,
+        CodeExecutionService executor,
+        IServiceProvider? serviceProvider = null)
     {
         _db = db;
         _executor = executor;
+        _authStateProvider = serviceProvider?.GetService<AuthenticationStateProvider>();
+        _httpContextAccessor = serviceProvider?.GetService<IHttpContextAccessor>();
+    }
+
+    /// <summary>
+    /// Retrieves the Player record for the currently authenticated user.
+    /// Supports both interactive SignalR circuits (via AuthenticationStateProvider)
+    /// and HTTP requests (via IHttpContextAccessor).
+    /// </summary>
+    public async Task<Player?> GetCurrentPlayerAsync()
+    {
+        string? userId = null;
+
+        if (_authStateProvider != null)
+        {
+            try
+            {
+                var authState = await _authStateProvider.GetAuthenticationStateAsync();
+                userId = authState.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            }
+            catch
+            {
+                // Fallback to HttpContextAccessor
+            }
+        }
+
+        if (string.IsNullOrEmpty(userId) && _httpContextAccessor?.HttpContext?.User != null)
+        {
+            userId = _httpContextAccessor.HttpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        }
+
+        if (string.IsNullOrEmpty(userId))
+            return null;
+
+        return await _db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
     // -------------------------------------------------------------------------

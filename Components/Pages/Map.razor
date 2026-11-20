@@ -101,19 +101,16 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var httpContext = HttpContextAccessor.HttpContext;
-        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        _player = await GameSvc.GetCurrentPlayerAsync();
 
-        if (userId != null)
+        if (_player != null)
         {
-            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (_player != null && !_player.TutorialComplete)
+            if (!_player.TutorialComplete)
             {
                 Nav.NavigateTo("/tutorial");
                 return;
             }
-            if (_player != null)
-                _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
+            _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
         }
         _loading = false;
     }

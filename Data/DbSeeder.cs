@@ -43,9 +43,9 @@ public static class DbSeeder
 
         if (existingZone != null)
         {
-            db.Attempts.RemoveRange(db.Attempts.Where(a => a.Battle.Challenge.ZoneId == existingZone.Id));
-            db.Battles.RemoveRange(db.Battles.Where(b => b.Challenge.ZoneId == existingZone.Id));
-            db.LessonProgresses.RemoveRange(db.LessonProgresses.Where(lp => lp.Lesson.ZoneId == existingZone.Id));
+            db.Attempts.RemoveRange(db.Attempts.Where(a => a.Battle != null && a.Battle.Challenge != null && a.Battle.Challenge.ZoneId == existingZone.Id));
+            db.Battles.RemoveRange(db.Battles.Where(b => b.Challenge != null && b.Challenge.ZoneId == existingZone.Id));
+            db.LessonProgresses.RemoveRange(db.LessonProgresses.Where(lp => lp.Lesson != null && lp.Lesson.ZoneId == existingZone.Id));
             db.Questions.RemoveRange(db.Questions.Where(q => q.ZoneId == existingZone.Id));
             db.Challenges.RemoveRange(db.Challenges.Where(c => c.ZoneId == existingZone.Id));
             db.Lessons.RemoveRange(db.Lessons.Where(l => l.ZoneId == existingZone.Id));

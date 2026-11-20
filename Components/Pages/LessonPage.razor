@@ -102,11 +102,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var httpContext = HttpContextAccessor.HttpContext;
-        var userId = httpContext?.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-        if (userId != null)
-            _player = await Db.Players.FirstOrDefaultAsync(p => p.UserId == userId);
+        _player = await GameSvc.GetCurrentPlayerAsync();
 
         _lesson = await Db.Lessons.FirstOrDefaultAsync(l => l.Id == LessonId);
         if (_lesson != null && _player != null)
