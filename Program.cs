@@ -107,7 +107,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
+app.MapStaticAssets();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
