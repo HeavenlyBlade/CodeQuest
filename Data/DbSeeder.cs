@@ -1,5 +1,6 @@
 using CodeQuest.Models;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 
 namespace CodeQuest.Data;
@@ -28,11 +29,29 @@ public static class DbSeeder
 
     /// <summary>
     /// Seeds the zone, lessons, monsters, and question bank.
-    /// Skips if any Zone already exists (idempotent).
+    /// Reseeds if existing seed is incomplete (< 10 lessons or unpaired monsters).
     /// </summary>
     public static void Seed(GameDbContext db)
     {
-        if (db.Zones.Any()) return;
+        var existingZone = db.Zones
+            .Include(z => z.Lessons)
+            .Include(z => z.Challenges)
+            .FirstOrDefault(z => z.OrderNumber == 1);
+
+        if (existingZone != null && existingZone.Lessons.Count >= 10 && existingZone.Challenges.All(c => c.LessonId != null))
+            return;
+
+        if (existingZone != null)
+        {
+            db.Attempts.RemoveRange(db.Attempts.Where(a => a.Battle.Challenge.ZoneId == existingZone.Id));
+            db.Battles.RemoveRange(db.Battles.Where(b => b.Challenge.ZoneId == existingZone.Id));
+            db.LessonProgresses.RemoveRange(db.LessonProgresses.Where(lp => lp.Lesson.ZoneId == existingZone.Id));
+            db.Questions.RemoveRange(db.Questions.Where(q => q.ZoneId == existingZone.Id));
+            db.Challenges.RemoveRange(db.Challenges.Where(c => c.ZoneId == existingZone.Id));
+            db.Lessons.RemoveRange(db.Lessons.Where(l => l.ZoneId == existingZone.Id));
+            db.Zones.Remove(existingZone);
+            db.SaveChanges();
+        }
 
         var zone = new Zone
         {

@@ -11,3 +11,5 @@ appsettings.Production.json
 
 # Local dev overrides (may contain passwords)
 appsettings.Development.json
+.dotnet/
+.nuget/

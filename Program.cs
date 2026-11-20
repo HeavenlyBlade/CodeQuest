@@ -72,6 +72,15 @@ catch (Exception ex)
     throw;
 }
 
+// ---- Automated End-to-End Workflow Test Execution ----
+if (args.Contains("--test-e2e"))
+{
+    using var testScope = app.Services.CreateScope();
+    var runner = new WorkflowE2ETestRunner(testScope.ServiceProvider);
+    var exitCode = await runner.RunAllTestsAsync();
+    Environment.Exit(exitCode);
+}
+
 // ---- HTTP pipeline ----
 if (!app.Environment.IsDevelopment())
 {
