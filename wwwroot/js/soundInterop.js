@@ -16,7 +16,10 @@ window.soundInterop = (() => {
     let _currentThemeSrc = null;
 
     // Muted state (persisted in localStorage)
-    let _muted = localStorage.getItem("cq_muted") === "true";
+    let _muted = false;
+    try {
+        _muted = localStorage.getItem("cq_muted") === "true";
+    } catch (e) {}
 
     /** Preload a sound effect so first play has no delay */
     function preload(name, src) {
@@ -75,7 +78,9 @@ window.soundInterop = (() => {
     /** Toggle mute on/off. Returns new muted state. */
     function toggleMute() {
         _muted = !_muted;
-        localStorage.setItem("cq_muted", _muted);
+        try {
+            localStorage.setItem("cq_muted", _muted);
+        } catch (e) {}
         if (_muted) {
             stopTheme();
         }

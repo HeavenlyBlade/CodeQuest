@@ -1,6 +1,5 @@
 @page "/tutorial"
 @attribute [Authorize]
-@rendermode InteractiveServer
 @using CodeQuest.Data
 @using Microsoft.EntityFrameworkCore
 @inject NavigationManager Nav
@@ -18,12 +17,12 @@
     </div>
 
     <div class="tutorial-progress mb-4">
-        <div class="tutorial-progress-fill" style="width:@ProgressWidth;"></div>
+        <div class="tutorial-progress-fill" style="width:@(_step * 100 / TotalSteps)%;"></div>
     </div>
 
     @if (_step == 1)
     {
-        <div class="animate-fade-in-up">
+        <div class="tutorial-step-card animate-fade-in-up">
             <h2>Welcome, Hero!</h2>
             <p class="lead" style="color:var(--color-teal);font-size:1.05rem;">
                 CodeQuest is an RPG designed to help you master C# through story and combat.
@@ -38,13 +37,12 @@
    ___         _     ___             _  
   / __|___  __| |___/ _ \ _  _ ___ __| |
  | (__/ _ \/ _` / -_) (_) | || / -_|_-&lt; _|
-  \___\___/\__,_\___|\__\_\_,_\___/__/\__|</pre>
+  \___\___/\__,_\___|\_._\_,_\___/__/\__|</pre>
         </div>
     }
-
-    @if (_step == 2)
+    else if (_step == 2)
     {
-        <div class="animate-fade-in-up">
+        <div class="tutorial-step-card animate-fade-in-up">
             <h2>Zones and Curriculum</h2>
             <p>
                 The continent is divided into <strong>Zones</strong>, each focused on a specific C# programming domain.
@@ -56,7 +54,7 @@
   [Lesson 1] The Storage Chests (int, string, bool)
       &#8600; Unlocks Monster 1: Valley Slime
   [Lesson 2] The Goblin's Tricks (naming &amp; assignment)
-      &#8600; Unlocks Monster 2: Sneaky Goblin
+      &#8600; Unlocks Monster 2: Data Goblin
   ...
   [Lesson 10] Master of Variables
       &#8600; Unlocks Zone Boss: Variable Dragon (BOSS)</div>
@@ -65,10 +63,9 @@
             </p>
         </div>
     }
-
-    @if (_step == 3)
+    else if (_step == 3)
     {
-        <div class="animate-fade-in-up">
+        <div class="tutorial-step-card animate-fade-in-up">
             <h2>How Battles Work</h2>
             <div class="row g-3 my-2">
                 <div class="col-md-6">
@@ -93,10 +90,9 @@
             </p>
         </div>
     }
-
-    @if (_step == 4)
+    else if (_step == 4)
     {
-        <div class="animate-fade-in-up">
+        <div class="tutorial-step-card animate-fade-in-up">
             <h2>Challenge Types</h2>
             <p>Throughout your quest, questions come in three distinct formats:</p>
             <ul style="line-height:1.8;">
@@ -109,56 +105,69 @@
             </div>
         </div>
     }
-
-    @if (_step == 5)
+    else if (_step == 5)
     {
-        <div class="animate-fade-in-up">
+        <div class="tutorial-step-card animate-fade-in-up">
             <h2>Variables Valley Awaits!</h2>
             <p>
                 You are ready to begin your journey. Start with <strong>Lesson 1: The Storage Chests</strong> in Variables Valley, read the lore and code examples, and conquer your first slime!
             </p>
             <div class="mb-3">
                 <span class="difficulty-badge badge-easy">Tier 1: Valley Slime</span>
-                <span class="difficulty-badge badge-medium">Tier 2: Sneaky Goblin</span>
+                <span class="difficulty-badge badge-medium">Tier 2: Data Goblin</span>
                 <span class="difficulty-badge badge-hard">Boss: Variable Dragon</span>
             </div>
             <div class="p-3 my-3 rounded" style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);">
                 <p style="margin:0;color:var(--color-gold);font-weight:600;">
-                    ⚔️ Ready, Hero? Click below to enter the World Map and claim your destiny!
+                    Ready, Hero? Click below to enter the World Map and claim your destiny!
                 </p>
             </div>
         </div>
     }
 
+    <!-- Controls Bar -->
     <div class="d-flex justify-content-between align-items-center mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
         @if (_step > 1)
         {
-            <button class="btn-secondary-fantasy" @onclick="Back">← Back</button>
+            <button type="button" class="btn-secondary-fantasy" @onclick="Back">
+                &larr; Back
+            </button>
         }
         else
         {
-            <div></div>
+            <span></span>
         }
 
-        <div class="d-flex gap-1">
+        <div class="d-flex gap-1 align-items-center">
             @for (int i = 1; i <= TotalSteps; i++)
             {
-                var stepIndex = i;
-                <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@(stepIndex == _step ? "var(--color-accent)" : "rgba(255,255,255,0.15)");margin:0 2px;cursor:pointer;"
-                      @onclick="() => SetStep(stepIndex)"></span>
+                var stepNum = i;
+                <span class="cq-step-dot"
+                      style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@(_step == stepNum ? "var(--color-accent)" : "rgba(255,255,255,0.15)");margin:0 3px;cursor:pointer;"
+                      @onclick="() => SetStep(stepNum)"></span>
             }
         </div>
 
-        @if (_step < TotalSteps)
-        {
-            <button class="btn-fantasy" @onclick="Next">Next →</button>
-        }
-        else
-        {
-            <button class="btn-fantasy" @onclick="FinishTutorial" disabled="@_saving">
-                @(_saving ? "Entering Map..." : "Start Your Quest! ⚔️")
-            </button>
-        }
+        <div>
+            @if (_step < TotalSteps)
+            {
+                <button type="button" class="btn-fantasy" @onclick="Next">
+                    Next &rarr;
+                </button>
+            }
+            else
+            {
+                <button type="button" class="btn-fantasy" @onclick="FinishTutorial" disabled="@_saving">
+                    @(_saving ? "Entering Map..." : "Start Your Quest!")
+                </button>
+            }
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <a href="/map?skip=1" @onclick="FinishTutorial" class="text-muted" style="font-size:0.85rem;text-decoration:underline;">
+            Skip tutorial and enter World Map &rarr;
+        </a>
     </div>
 </div>
 
@@ -167,11 +176,33 @@
     private const int TotalSteps = 5;
     private Player? _player;
     private bool _saving = false;
-    private string ProgressWidth => $"{(_step * 100) / TotalSteps}%";
 
-    private void Next() { if (_step < TotalSteps) _step++; }
-    private void Back() { if (_step > 1) _step--; }
-    private void SetStep(int s) { if (s >= 1 && s <= TotalSteps) _step = s; }
+    private void Next()
+    {
+        if (_step < TotalSteps)
+        {
+            _step++;
+            StateHasChanged();
+        }
+    }
+
+    private void Back()
+    {
+        if (_step > 1)
+        {
+            _step--;
+            StateHasChanged();
+        }
+    }
+
+    private void SetStep(int s)
+    {
+        if (s >= 1 && s <= TotalSteps)
+        {
+            _step = s;
+            StateHasChanged();
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -195,7 +226,7 @@
         }
         catch
         {
-            // Proceed to map even if already saved
+            // Proceed to map even if already marked
         }
         finally
         {

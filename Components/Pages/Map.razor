@@ -85,7 +85,7 @@ else
     <div class="mt-4">
         <a href="/leaderboard" class="btn btn-outline-secondary">Leaderboard</a>
         <form method="post" action="/logout" class="d-inline ms-2">
-            <input type="hidden" name="__RequestVerificationToken" value="" />
+            <AntiforgeryToken />
             <button type="submit" class="btn btn-outline-danger">Logout</button>
         </form>
     </div>
@@ -107,8 +107,17 @@ else
         {
             if (!_player.TutorialComplete)
             {
-                Nav.NavigateTo("/tutorial");
-                return;
+                var uri = Nav.ToAbsoluteUri(Nav.Uri);
+                if (Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query).ContainsKey("skip"))
+                {
+                    await GameSvc.CompleteTutorialAsync(_player.Id);
+                    _player.TutorialComplete = true;
+                }
+                else
+                {
+                    Nav.NavigateTo("/tutorial");
+                    return;
+                }
             }
             _zones = await GameSvc.GetZonesWithStatusAsync(_player.Id);
         }

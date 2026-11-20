@@ -2,6 +2,7 @@ using CodeQuest.Components;
 using CodeQuest.Data;
 using CodeQuest.Services;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,6 +11,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Render injects PORT env var — bind Kestrel to it
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// ---- Reverse Proxy Forwarded Headers (Render / Docker) ----
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // ---- Database ----
 builder.Services.AddDbContext<GameDbContext>(options =>
@@ -52,7 +61,10 @@ builder.Services.AddRazorPages();
 
 // ---- Blazor ----
 builder.Services.AddRazorComponents()
-    .AddInteractiveServerComponents();
+    .AddInteractiveServerComponents(options =>
+    {
+        options.DetailedErrors = true;
+    });
 
 var app = builder.Build();
 
@@ -83,14 +95,19 @@ if (args.Contains("--test-e2e"))
 }
 
 // ---- HTTP pipeline ----
+app.UseForwardedHeaders();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
-app.MapStaticAssets();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseAntiforgery();
