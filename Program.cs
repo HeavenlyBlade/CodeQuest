@@ -8,9 +8,12 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Render injects PORT env var — bind Kestrel to it
-var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
-builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+// Render injects PORT env var — bind Kestrel to it (production/Docker only)
+if (!builder.Environment.IsDevelopment())
+{
+    var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
 
 // ---- Reverse Proxy Forwarded Headers (Render / Docker) ----
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
@@ -21,8 +24,16 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 });
 
 // ---- Database ----
-builder.Services.AddDbContext<GameDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<GameDbContext>(options =>
+        options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
+else
+{
+    builder.Services.AddDbContext<GameDbContext>(options =>
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+}
 
 // ---- DataProtection — store keys in Neon DB so sessions survive container restarts ----
 builder.Services.AddDataProtection()
