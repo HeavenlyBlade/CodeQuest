@@ -17,7 +17,20 @@
 }
 else if (_player == null)
 {
-    <p class="text-center mt-5 text-danger">Player record not found. Please re-register.</p>
+    <div class="panel text-center mt-5">
+        <h4 class="text-warning">Adventurer Profile Notice</h4>
+        <p>No player record is linked to this account.</p>
+        <AuthorizeView Roles="Teacher">
+            <Authorized>
+                <p>Welcome, Teacher! You can access the administration portal below:</p>
+                <a href="/teacher/zones" class="btn-fantasy">Go to Teacher Portal</a>
+            </Authorized>
+            <NotAuthorized>
+                <p class="text-danger">Player record not found. Please re-register.</p>
+                <a href="/register" class="btn btn-outline-primary">Register New Hero</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    </div>
 }
 else
 {

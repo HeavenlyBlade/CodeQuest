@@ -121,6 +121,63 @@ else
             </div>
         </div>
     }
+
+    @* Zone Challenges List (Descending Order) *@
+    <div class="panel mt-4 animate-fade-in-up">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 style="font-family:var(--font-heading);color:var(--color-gold);margin:0;">
+                Zone Challenges &amp; Bosses (Descending Order)
+            </h4>
+            <span class="badge bg-dark text-muted">High-tier to Entry</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-dark table-hover align-middle mb-0" style="background:transparent;">
+                <thead>
+                    <tr style="border-bottom:1px solid rgba(255,255,255,0.15);color:var(--color-muted);font-size:0.85rem;">
+                        <th>Order</th>
+                        <th>Monster</th>
+                        <th>HP</th>
+                        <th>Difficulty</th>
+                        <th>Rewards</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in _zone.Challenges.OrderByDescending(c => c.OrderNumber))
+                    {
+                        var isWon = _wonChallengeIds.Contains(c.Id);
+                        <tr>
+                            <td>
+                                @if (c.IsBoss)
+                                {
+                                    <span class="badge bg-danger">BOSS #@c.OrderNumber</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">#@c.OrderNumber</span>
+                                }
+                            </td>
+                            <td>
+                                <strong>@c.MonsterName</strong>
+                                @if (c.Lesson != null)
+                                {
+                                    <div class="small text-muted">Linked Lesson: @c.Lesson.Title</div>
+                                }
+                            </td>
+                            <td>@c.MonsterHp HP</td>
+                            <td><span class="badge bg-dark">@c.Difficulty</span></td>
+                            <td class="gold-text">+@c.XpReward XP / +@c.GoldReward G</td>
+                            <td>
+                                <a href="/battle/@c.Id" class="btn btn-sm @(isWon ? "btn-secondary-fantasy" : "btn-fantasy")">
+                                    @(isWon ? "Replay" : "Challenge")
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 }
 
 @code {
@@ -130,6 +187,7 @@ else
     private Zone? _zone;
     private Player? _player;
     private List<MapNode> _nodes = new();
+    private HashSet<int> _wonChallengeIds = new();
     private MapNode? _modalNode;
 
     private record MapNode(
@@ -171,6 +229,7 @@ else
             .Select(b => b.ChallengeId)
             .Distinct()
             .ToListAsync();
+        _wonChallengeIds = wonChallengeIds.ToHashSet();
 
         // Build node list — 2 nodes per lesson (lesson + monster)
         _nodes = new List<MapNode>();

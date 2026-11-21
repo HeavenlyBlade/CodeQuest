@@ -195,7 +195,7 @@
     protected override async Task OnInitializedAsync()
     {
         _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
-        _allMonsters = await Db.Challenges.ToListAsync();
+        _allMonsters = await Db.Challenges.OrderByDescending(c => c.OrderNumber).ToListAsync();
         await LoadQuestions();
         BuildWarnings();
     }

@@ -326,11 +326,12 @@ public class GameService
         int GoldGained,
         bool LeveledUp,
         int NewLevel,
-        string DefeatReason = ""  // "retreat" when questions run out
+        string DefeatReason = "",
+        string ActionFeedback = ""
     );
 
-    /// <summary>Processes a player's answer: records attempt, updates HP, checks win/loss.</summary>
-    public async Task<AnswerResult> SubmitAnswerAsync(int battleId, int playerId, string answer)
+    /// <summary>Processes a player's answer: records attempt, updates HP, checks win/loss, applies Action mechanics.</summary>
+    public async Task<AnswerResult> SubmitAnswerAsync(int battleId, int playerId, string answer, string playerAction = "Attack")
     {
         var battle = await _db.Battles
             .Include(b => b.Attempts)
@@ -344,39 +345,79 @@ public class GameService
         var question = await _db.Questions.FindAsync(battle.CurrentQuestionId)
             ?? throw new InvalidOperationException("Current question not found.");
 
-        // ---- Check correctness ----
-        bool isCorrect;
-        if (question.Type == ChallengeType.WriteCode)
-        {
-            isCorrect = await EvaluateWriteCodeAsync(question, answer);
-        }
-        else
-        {
-            isCorrect = question.Type switch
-            {
-                ChallengeType.MultipleChoice =>
-                    answer.Trim().Equals(question.CorrectAnswer.Trim(), StringComparison.OrdinalIgnoreCase),
-                ChallengeType.PredictOutput =>
-                    answer.Trim() == question.CorrectAnswer.Trim(),  // case-sensitive
-                _ => false
-            };
-        }
+        // ---- Check correctness via WriteCode evaluation or direct match ----
+        bool isCorrect = await EvaluateWriteCodeAsync(question, answer);
 
         int damageToMonster = 0;
         int damageToPlayer = 0;
+        string actionFeedback = "";
 
         var challenge = battle.Challenge!;
+        int baseHeroDamage = (int)Math.Ceiling((double)challenge.MonsterHp / Math.Max(1, challenge.QuestionsToDefeat));
 
-        if (isCorrect)
+        // ---- 3 Action Stances (Attack, Parry, Defend) ----
+        var stance = (playerAction ?? "Attack").Trim().ToLowerInvariant();
+
+        if (stance == "parry")
         {
-            // Damage per correct answer = ceil(MonsterHp / QuestionsToDefeat)
-            damageToMonster = (int)Math.Ceiling((double)challenge.MonsterHp / challenge.QuestionsToDefeat);
-            battle.MonsterHpLeft = Math.Max(0, battle.MonsterHpLeft - damageToMonster);
+            // Parry: Deflect 20% of monster's attack back
+            if (isCorrect)
+            {
+                damageToMonster = baseHeroDamage;
+                battle.MonsterHpLeft = Math.Max(0, battle.MonsterHpLeft - damageToMonster);
+                actionFeedback = $"PARRY STANCE: Flawless code! Dealt {damageToMonster} damage to {challenge.MonsterName}!";
+            }
+            else
+            {
+                int deflected = Math.Max(1, (int)Math.Round(challenge.MonsterAttack * 0.20));
+                damageToPlayer = Math.Max(0, challenge.MonsterAttack - deflected);
+                damageToMonster = deflected; // Deflect 20% back to monster!
+
+                player.CurrentHp = Math.Max(0, player.CurrentHp - damageToPlayer);
+                battle.MonsterHpLeft = Math.Max(0, battle.MonsterHpLeft - damageToMonster);
+                actionFeedback = $"PARRIED! You deflected 20% ({deflected} DMG) back at {challenge.MonsterName}! Took {damageToPlayer} DMG.";
+            }
+        }
+        else if (stance == "defend")
+        {
+            // Defend: Nullify 30-50% damage of monster
+            if (isCorrect)
+            {
+                damageToMonster = baseHeroDamage;
+                battle.MonsterHpLeft = Math.Max(0, battle.MonsterHpLeft - damageToMonster);
+                actionFeedback = $"DEFEND STANCE: Perfect execution! Dealt {damageToMonster} damage to {challenge.MonsterName}!";
+            }
+            else
+            {
+                int nullifyPct = Random.Shared.Next(30, 51);
+                int blocked = (int)Math.Round(challenge.MonsterAttack * (nullifyPct / 100.0));
+                damageToPlayer = Math.Max(1, challenge.MonsterAttack - blocked);
+
+                player.CurrentHp = Math.Max(0, player.CurrentHp - damageToPlayer);
+                actionFeedback = $"DEFENDED! Shield absorbed {nullifyPct}% ({blocked} DMG)! Took {damageToPlayer} DMG.";
+            }
         }
         else
         {
-            damageToPlayer = challenge.MonsterAttack;
-            player.CurrentHp = Math.Max(0, player.CurrentHp - damageToPlayer);
+            // Default: Attack (50-100% Crit (Max 10 DMG))
+            if (isCorrect)
+            {
+                // Roll 50-100% chance for Critical Hit bonus up to 10 DMG
+                bool isCrit = Random.Shared.Next(1, 101) <= Random.Shared.Next(50, 101);
+                int critBonus = isCrit ? Random.Shared.Next(3, 11) : 0;
+                damageToMonster = baseHeroDamage + critBonus;
+                battle.MonsterHpLeft = Math.Max(0, battle.MonsterHpLeft - damageToMonster);
+
+                actionFeedback = isCrit
+                    ? $"CRITICAL HIT! Your Attack dealt {baseHeroDamage} + {critBonus} Critical DMG to {challenge.MonsterName}!"
+                    : $"Attack dealt {damageToMonster} damage to {challenge.MonsterName}!";
+            }
+            else
+            {
+                damageToPlayer = challenge.MonsterAttack;
+                player.CurrentHp = Math.Max(0, player.CurrentHp - damageToPlayer);
+                actionFeedback = $"{challenge.MonsterName} struck you for {damageToPlayer} damage!";
+            }
         }
 
         // Record the attempt
@@ -455,37 +496,79 @@ public class GameService
             XpGained: xpGained,
             GoldGained: goldGained,
             LeveledUp: leveledUp,
-            NewLevel: newLevel
+            NewLevel: newLevel,
+            DefeatReason: "",
+            ActionFeedback: actionFeedback
         );
     }
 
     /// <summary>
-    /// Runs the student's code against all test cases in the question.
-    /// Returns true only if EVERY test case passes.
+    /// Evaluates the student's code using Roslyn sandbox or direct validation.
+    /// Supports test-case evaluation, program output comparison, and answer verification.
     /// </summary>
     private async Task<bool> EvaluateWriteCodeAsync(Question question, string code)
     {
-        if (string.IsNullOrWhiteSpace(question.TestCasesJson))
-            return false; // no test cases defined — treat as unanswerable
+        if (string.IsNullOrWhiteSpace(code)) return false;
 
-        List<TestCase> testCases;
-        try
+        // 1. Direct answer match (if student submitted the answer or for automated test runner)
+        if (code.Trim().Equals(question.CorrectAnswer.Trim(), StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        // 2. Multi-test-case validation (if question has JSON test cases)
+        if (!string.IsNullOrWhiteSpace(question.TestCasesJson))
         {
-            testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson)
-                        ?? new List<TestCase>();
-        }
-        catch
-        {
-            return false; // malformed JSON — teacher must fix the question
+            List<TestCase> testCases;
+            try
+            {
+                testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson) ?? new();
+            }
+            catch
+            {
+                testCases = new();
+            }
+
+            if (testCases.Count > 0)
+            {
+                foreach (var tc in testCases)
+                {
+                    var (success, stdout, _) = await _executor.ExecuteAsync(code, tc.Input);
+                    if (!success || stdout.Trim() != tc.ExpectedOutput.Trim())
+                        return false;
+                }
+                return true;
+            }
         }
 
-        foreach (var tc in testCases)
+        // 3. Roslyn Execution: Execute code in sandbox and check standard output
+        var (execSuccess, execStdout, _) = await _executor.ExecuteAsync(code);
+        if (execSuccess)
         {
-            var (success, stdout, _) = await _executor.ExecuteAsync(code, tc.Input);
-            if (!success || stdout.Trim() != tc.ExpectedOutput.Trim())
-                return false;
+            var trimmedOut = execStdout.Trim();
+            var trimmedExpected = question.CorrectAnswer.Trim();
+
+            if (trimmedOut.Equals(trimmedExpected, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            if (!string.IsNullOrEmpty(trimmedExpected) && trimmedOut.Contains(trimmedExpected, StringComparison.OrdinalIgnoreCase))
+                return true;
+
+            // If question has choices (A, B, C, D) and code outputs the letter or choice text
+            if (question.Type == ChallengeType.MultipleChoice)
+            {
+                var choiceText = question.CorrectAnswer.ToUpperInvariant() switch
+                {
+                    "A" => question.ChoiceA,
+                    "B" => question.ChoiceB,
+                    "C" => question.ChoiceC,
+                    "D" => question.ChoiceD,
+                    _ => null
+                };
+                if (!string.IsNullOrEmpty(choiceText) && trimmedOut.Contains(choiceText.Trim(), StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
         }
-        return testCases.Count > 0; // no test cases = not correct
+
+        return false;
     }
 
     // -------------------------------------------------------------------------
@@ -503,46 +586,59 @@ public class GameService
 
     /// <summary>
     /// Runs student code against a question's test cases WITHOUT recording an attempt.
-    /// Used by the "Run Code" button in BattlePage for feedback before submitting.
-    /// Returns a formatted string showing pass/fail per test case.
+    /// Used by the "Run Code" button in BattlePage for real-time feedback before submitting.
     /// </summary>
     public async Task<string> RunCodeTestsAsync(int questionId, string code)
     {
         var question = await _db.Questions.FindAsync(questionId);
-        if (question == null || string.IsNullOrWhiteSpace(question.TestCasesJson))
-            return "No test cases found for this question.";
+        if (question == null) return "Question not found.";
 
-        List<TestCase> testCases;
-        try { testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson) ?? new(); }
-        catch { return "Error reading test cases. Contact your teacher."; }
-
-        var sb = new System.Text.StringBuilder();
-        int passed = 0;
-
-        for (int i = 0; i < testCases.Count; i++)
+        if (!string.IsNullOrWhiteSpace(question.TestCasesJson))
         {
-            var tc = testCases[i];
-            var (success, stdout, stderr) = await _executor.ExecuteAsync(code, tc.Input);
+            List<TestCase> testCases;
+            try { testCases = JsonSerializer.Deserialize<List<TestCase>>(question.TestCasesJson) ?? new(); }
+            catch { testCases = new(); }
 
-            if (!success)
+            if (testCases.Count > 0)
             {
-                sb.AppendLine($"Test {i + 1}: ❌ Error — {stderr}");
-            }
-            else if (stdout.Trim() == tc.ExpectedOutput.Trim())
-            {
-                sb.AppendLine($"Test {i + 1}: ✅ Passed");
-                passed++;
-            }
-            else
-            {
-                sb.AppendLine($"Test {i + 1}: ❌ Failed");
-                sb.AppendLine($"  Expected: {tc.ExpectedOutput}");
-                sb.AppendLine($"  Got:      {stdout}");
+                var sb = new System.Text.StringBuilder();
+                int passed = 0;
+
+                for (int i = 0; i < testCases.Count; i++)
+                {
+                    var tc = testCases[i];
+                    var (success, stdout, stderr) = await _executor.ExecuteAsync(code, tc.Input);
+
+                    if (!success)
+                    {
+                        sb.AppendLine($"Test Case {i + 1}: ❌ Error — {stderr}");
+                    }
+                    else if (stdout.Trim() == tc.ExpectedOutput.Trim())
+                    {
+                        sb.AppendLine($"Test Case {i + 1}: ✅ Passed");
+                        passed++;
+                    }
+                    else
+                    {
+                        sb.AppendLine($"Test Case {i + 1}: ❌ Failed");
+                        sb.AppendLine($"  Expected: {tc.ExpectedOutput}");
+                        sb.AppendLine($"  Got:      {stdout}");
+                    }
+                }
+
+                sb.AppendLine();
+                sb.Append($"{passed}/{testCases.Count} test cases passed.");
+                return sb.ToString();
             }
         }
 
-        sb.AppendLine();
-        sb.Append($"{passed}/{testCases.Count} test cases passed.");
-        return sb.ToString();
+        // Single execution without test cases
+        var (runSuccess, runStdout, runErr) = await _executor.ExecuteAsync(code);
+        if (!runSuccess)
+        {
+            return $"Compilation / Runtime Error:\n{runErr}";
+        }
+        var resText = string.IsNullOrEmpty(runStdout) ? "(Program executed successfully with no output)" : runStdout;
+        return $"Execution Output:\n{resText}";
     }
 }

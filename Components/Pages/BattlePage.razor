@@ -14,7 +14,9 @@
 
 @if (_loading)
 {
-    <p class="text-center mt-5">Preparing for battle...</p>
+    <div class="panel text-center mt-5">
+        <p>Entering the battle arena...</p>
+    </div>
 }
 else if (_player == null)
 {
@@ -30,22 +32,25 @@ else
     @if (_battle.Status == BattleStatus.Won)
     {
         <div class="panel text-center animate-scale-in">
-            <h2>Victory!</h2>
-            <p>You defeated <strong>@_challenge?.MonsterName</strong>!</p>
-            @if (_lastResult != null && _lastResult.XpGained > 0)
-            {
-                <p class="gold-text">
-                    +@_lastResult.XpGained XP &nbsp; +@_lastResult.GoldGained gold
-                </p>
-                @if (_lastResult.LeveledUp)
+            <h2 style="font-family:var(--font-heading);color:var(--color-gold);">Victory Achieved!</h2>
+            <p>You conquered <strong>@_challenge?.MonsterName</strong>!</p>
+            <div class="p-3 my-3 rounded" style="background:rgba(245,166,35,0.1);border:1px solid rgba(245,166,35,0.3);max-width:400px;margin:0 auto;">
+                <div class="small text-muted mb-1">Clear Time: @FormatDuration(_battleDuration)</div>
+                @if (_lastResult != null && _lastResult.XpGained > 0)
                 {
-                    <p class="text-success fs-5">Level Up! You are now Level @_lastResult.NewLevel!</p>
+                    <div class="gold-text fs-5">
+                        +@_lastResult.XpGained XP &nbsp; +@_lastResult.GoldGained Gold
+                    </div>
+                    @if (_lastResult.LeveledUp)
+                    {
+                        <div class="text-success mt-2 fw-bold">Level Up! You are now Level @_lastResult.NewLevel!</div>
+                    }
                 }
-            }
-            else
-            {
-                <p class="text-muted small">(Already beaten — no extra rewards this time)</p>
-            }
+                else
+                {
+                    <div class="text-muted small">(Replayed Battle — Practice Only)</div>
+                }
+            </div>
             @if (_nextLesson != null)
             {
                 <a href="/lesson/@_nextLesson.Id" class="btn-fantasy mt-2">Next: @_nextLesson.Title</a>
@@ -59,19 +64,19 @@ else
         <div class="panel text-center animate-fade-in-up">
             @if (_defeatReason == "retreat")
             {
-                <h2>Retreat!</h2>
-                <p>You can't defeat <strong>@_challenge?.MonsterName</strong> as you are now.</p>
-                <p class="muted-text">Try to re-learn the lesson and come back stronger.</p>
+                <h2>Tactical Retreat!</h2>
+                <p>You were unable to defeat <strong>@_challenge?.MonsterName</strong>.</p>
+                <p class="muted-text">Review the lesson material to strengthen your code knowledge!</p>
                 @if (_challenge?.LessonId != null)
                 {
-                    <a href="/lesson/@_challenge.LessonId" class="btn-fantasy mt-3">Re-learn the Lesson</a>
+                    <a href="/lesson/@_challenge.LessonId" class="btn-fantasy mt-3">Re-learn Lesson</a>
                 }
                 <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-3">Back to Zone</a>
             }
             else
             {
-                <h2>Defeated!</h2>
-                <p>You were struck down by <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
+                <h2 class="text-danger">Defeated!</h2>
+                <p>You fell before <strong>@_challenge?.MonsterName</strong>. Your HP has been restored.</p>
                 <button class="btn-fantasy mt-3" @onclick="TryAgain">Try Again</button>
                 <a href="/zone/@(_challenge?.ZoneId)" class="ms-3 btn btn-outline-secondary mt-3">Back to Zone</a>
             }
@@ -80,146 +85,217 @@ else
     <!-- Battle in progress -->
     else
     {
-        <!-- Monster HUD -->
-        <div class="panel mb-3">
-            <div class="d-flex align-items-center gap-3">
-                <!-- Monster sprite (shows pixel art if available, falls back gracefully) -->
-                <div class="monster-sprite-wrap">
-                    @if (MonsterSpritePath != null)
-                    {
-                        <img src="@MonsterSpritePath" alt="@_challenge?.MonsterName" class="monster-sprite" />
-                    }
-                    else
-                    {
-                        <div class="monster-sprite-fallback">👾</div>
-                    }
-                </div>
-                <div class="flex-fill">
-                    <h3 class="mb-1">@_challenge?.MonsterName</h3>
-                    <div class="bar-label">Monster HP</div>
-                    <div class="hp-bar mt-1 mb-1">
-                        <div class="hp-bar-fill" style="width:@MonsterHpPercent%"></div>
+        <!-- Header & Timers HUD -->
+        <div class="battle-timers-bar">
+            <div class="timer-pill">
+                <span>Total Battle:</span>
+                <span class="gold-text font-monospace">@FormatDuration(_battleDuration)</span>
+            </div>
+            <div class="timer-pill @(_questionSecondsLeft <= 15 ? "urgent" : "")">
+                <span>Turn Timer:</span>
+                <span class="font-monospace">@_questionSecondsLeft s</span>
+            </div>
+        </div>
+
+        <!-- Pokemon-Style Battle Arena Stage -->
+        <div class="pokemon-arena @(_isDragon ? "dragon-intro-shake" : "")">
+            <div class="pokemon-stage">
+                <!-- TOP-RIGHT: Opponent Monster Platform & Status Plate -->
+                <div class="pokemon-opponent-row">
+                    <!-- Status Plate -->
+                    <div class="pokemon-plate pokemon-plate-opponent">
+                        <div class="pokemon-plate-header">
+                            <h4 class="pokemon-name">@_challenge?.MonsterName</h4>
+                            <span class="pokemon-level">Lv.@(_challenge?.OrderNumber * 2 ?? 1)</span>
+                        </div>
+                        <div class="pokemon-hp-track">
+                            <div class="pokemon-hp-fill @GetHpClass(MonsterHpPercent)" style="width:@MonsterHpPercent%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted" style="font-size:0.75rem;">
+                            <span>HP</span>
+                            <span>@_battle.MonsterHpLeft / @_challenge?.MonsterHp</span>
+                        </div>
                     </div>
-                    <small>@_battle.MonsterHpLeft / @_challenge?.MonsterHp HP</small>
+
+                    <!-- Platform & Sprite -->
+                    <div class="pokemon-monster-platform">
+                        @if (MonsterSpritePath != null)
+                        {
+                            <img src="@MonsterSpritePath" alt="@_challenge?.MonsterName" class="pokemon-monster-sprite" />
+                        }
+                        else
+                        {
+                            <div style="font-size:3rem;line-height:1;z-index:2;">👾</div>
+                        }
+                        <div class="pokemon-shadow"></div>
+                    </div>
+                </div>
+
+                <!-- BOTTOM-LEFT: Hero Player Platform & Status Plate -->
+                <div class="pokemon-player-row">
+                    <!-- Platform & Avatar -->
+                    <div class="pokemon-hero-platform">
+                        <div class="pokemon-hero-avatar">
+                            &#9876;
+                        </div>
+                        <div class="pokemon-shadow" style="width:75px;"></div>
+                    </div>
+
+                    <!-- Status Plate -->
+                    <div class="pokemon-plate pokemon-plate-hero">
+                        <div class="pokemon-plate-header">
+                            <h4 class="pokemon-name">@_player.HeroName</h4>
+                            <span class="pokemon-level">Lv.@_player.Level</span>
+                        </div>
+                        <div class="pokemon-hp-track">
+                            <div class="pokemon-hp-fill @GetHpClass(PlayerHpPercent)" style="width:@PlayerHpPercent%;"></div>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted" style="font-size:0.75rem;">
+                            <span>HP</span>
+                            <span>@_player.CurrentHp / @_player.MaxHp</span>
+                        </div>
+                        <div class="pokemon-exp-track">
+                            <div class="pokemon-exp-fill" style="width:@PlayerExpPercent%;"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="battle-vs">&#8212; VS &#8212;</div>
-
-        <!-- Player HUD -->
-        <div class="panel mb-3">
-            <h5>@_player.HeroName</h5>
-            <div class="bar-label">Your HP</div>
-            <div class="hp-bar mt-1 mb-1">
-                <div class="hp-bar-fill" style="width:@PlayerHpPercent%"></div>
-            </div>
-            <small>HP: @_player.CurrentHp / @_player.MaxHp</small>
-        </div>
-
-        <!-- Question or feedback -->
-        @if (_showFeedback && _lastResult != null)
-        {
-            <!-- Post-answer feedback -->
-            <div class="panel mb-3">
+        <!-- Pokemon Retro Dialogue / Feedback Box -->
+        <div class="pokemon-dialogue">
+            @if (_showFeedback && _lastResult != null)
+            {
                 @if (_lastResult.IsCorrect)
                 {
-                    <p class="text-success"><span class="feedback-correct">Correct!</span> You dealt <strong>@_lastResult.DamageToMonster damage</strong> to the monster.</p>
-                }
-                else
-                {
-                    <p class="text-danger"><span class="feedback-wrong">Wrong!</span> The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you.</p>
-                }
-
-                @if (_currentQuestion?.Type == ChallengeType.WriteCode)
-                {
-                    <p>@(_lastResult.IsCorrect ? "All test cases passed!" : "One or more test cases failed.")</p>
-                    @if (_testOutput is not null)
+                    <div class="text-success fw-bold">Critical Strike! You answered correctly!</div>
+                    <div>You dealt <strong>@_lastResult.DamageToMonster damage</strong> to @_challenge?.MonsterName!</div>
+                    @if (!string.IsNullOrEmpty(_lastResult.ActionFeedback))
                     {
-                        <pre class="code-block" style="font-size:0.85rem;">@_testOutput</pre>
+                        <div class="gold-text small mt-1">@_lastResult.ActionFeedback</div>
                     }
                 }
                 else
                 {
-                    <p>The correct answer was: <strong>@_lastResult.CorrectAnswer</strong></p>
+                    <div class="text-danger fw-bold">Missed! The monster countered!</div>
+                    <div>The monster dealt <strong>@_lastResult.DamageToPlayer damage</strong> to you!</div>
+                    @if (!string.IsNullOrEmpty(_lastResult.ActionFeedback))
+                    {
+                        <div class="text-info small mt-1">@_lastResult.ActionFeedback</div>
+                    }
+                    <div class="text-muted small mt-1">Correct Answer: @_lastResult.CorrectAnswer</div>
                 }
 
                 @if (_battle.Status == BattleStatus.InProgress)
                 {
-                    <button class="btn-fantasy" @onclick="LoadNextQuestion">Next Question →</button>
+                    <div class="mt-2">
+                        <button class="btn-fantasy btn-sm" @onclick="LoadNextQuestion">Next Question &rarr;</button>
+                    </div>
                 }
-            </div>
-        }
-        else if (_currentQuestion == null)
+            }
+            else
+            {
+                <div>What will <strong>@_player.HeroName</strong> do? Choose a combat stance and solve the code puzzle!</div>
+            }
+        </div>
+
+        @if (!_showFeedback && _currentQuestion != null)
         {
-            <div class="panel">
-                <p>No more questions available. The monster retreats!</p>
-            </div>
-        }
-        else
-        {
-            <!-- Question display -->
+            <!-- Question & Code Workspace -->
             <div class="panel mb-3">
-                <h5>Question</h5>
-                <p style="white-space:pre-wrap">@_currentQuestion.Text</p>
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 style="margin:0;color:var(--color-gold);">Battle Challenge</h5>
+                    <span class="badge bg-secondary">@_currentQuestion.Difficulty</span>
+                </div>
+                <p style="white-space:pre-wrap;font-size:0.95rem;">@_currentQuestion.Text</p>
+
+                <!-- 3 Pre-Programming Combat Actions (Stances) -->
+                <div class="mb-3">
+                    <div class="small text-muted mb-1 fw-bold">SELECT COMBAT STANCE:</div>
+                    <div class="pokemon-actions-bar">
+                        <div class="action-stance-card @(_selectedAction == "Attack" ? "active" : "")"
+                             @onclick='() => SelectAction("Attack")'>
+                            <div class="stance-title text-danger">
+                                <span>&#9876;</span> Attack Stance
+                            </div>
+                            <div class="stance-desc">50-100% Crit Chance (up to +10 bonus DMG)</div>
+                        </div>
+
+                        <div class="action-stance-card @(_selectedAction == "Parry" ? "active parry" : "")"
+                             @onclick='() => SelectAction("Parry")'>
+                            <div class="stance-title text-info">
+                                <span>&#9969;</span> Parry Stance
+                            </div>
+                            <div class="stance-desc">Deflect 20% monster counterattack back</div>
+                        </div>
+
+                        <div class="action-stance-card @(_selectedAction == "Defend" ? "active defend" : "")"
+                             @onclick='() => SelectAction("Defend")'>
+                            <div class="stance-title text-warning">
+                                <span>&#9670;</span> Defend Stance
+                            </div>
+                            <div class="stance-desc">Nullify 30-50% damage if incorrect</div>
+                        </div>
+                    </div>
+                </div>
 
                 @if (_currentQuestion.Type == ChallengeType.MultipleChoice)
                 {
-                    <!-- Multiple choice radio buttons -->
-                    <div class="mt-2">
-                        @foreach (var (letter, text) in GetChoices())
-                        {
-                            <div style="background:rgba(255,255,255,0.03);border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.4rem;border:1px solid rgba(255,255,255,0.06);">
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="radio" name="mcAnswer"
-                                       id="choice_@letter" value="@letter"
-                                       checked="@(_answer == letter)"
-                                       @onchange="() => _answer = letter" />
-                                <label class="form-check-label" for="choice_@letter">
-                                    <strong>@letter:</strong> @text
-                                </label>
-                            </div>
-                            </div>
-                        }
+                    <!-- Multiple choice hints and quick selection -->
+                    <div class="mb-2">
+                        <div class="small text-muted mb-1">Answer Choices (write output or code in editor, or pick directly):</div>
+                        <div class="row g-2 mb-2">
+                            @foreach (var (letter, text) in GetChoices())
+                            {
+                                <div class="col-md-6">
+                                    <div class="p-2 rounded"
+                                         style="background:rgba(255,255,255,0.04);border:1px solid @(_answer == letter ? "var(--color-accent)" : "rgba(255,255,255,0.1)");cursor:pointer;"
+                                         @onclick="() => SetChoiceAnswer(letter)">
+                                        <strong>@letter:</strong> @text
+                                    </div>
+                                </div>
+                            }
+                        </div>
                     </div>
                 }
-                else if (_currentQuestion.Type == ChallengeType.PredictOutput)
-                {
-                    <!-- Predict output text input -->
-                    <div class="mt-2">
-                        <label class="form-label">Your answer (exact output):</label>
-                        <input type="text" class="form-control" style="max-width:300px"
-                               @bind="_answer" @bind:event="oninput"
-                               placeholder="Type the output..." />
+
+                <!-- Monaco Code Editor for All Challenges -->
+                <div class="mt-2">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted">C# Code Workspace:</span>
+                        <button class="btn btn-sm btn-outline-info" @onclick="RunCodeTests" disabled="@_running">
+                            @(_running ? "Running…" : "▶ Run Code")
+                        </button>
                     </div>
-                }
-                else if (_currentQuestion.Type == ChallengeType.WriteCode)
-                {
-                    <p class="mb-1 fst-italic" style="color:var(--color-muted)">
-                        Write C# code that produces the correct output for all test cases.
-                    </p>
-                    <div id="monaco-editor-@_battle!.Id"
-                         style="height:280px; border:1px solid #444; border-radius:4px; margin-bottom:0.5rem;">
+
+                    <div id="monaco-editor-@_battle.Id"
+                         style="height:260px; border:1px solid #444; border-radius:6px; margin-bottom:0.5rem;">
                     </div>
-                    <button class="btn btn-sm btn-outline-info mt-1"
-                            @onclick="RunCodeTests"
-                            disabled="@_running">
-                        @(_running ? "Running…" : "▶ Run Code")
-                    </button>
+
                     @if (_testOutput is not null)
                     {
-                        <div class="mt-2 code-block" style="font-size:0.85rem; white-space:pre-wrap;">@_testOutput</div>
+                        <div class="mt-2 code-block p-2 rounded" style="font-size:0.85rem; white-space:pre-wrap; background:rgba(0,0,0,0.5); border:1px solid rgba(255,255,255,0.1);">
+                            @_testOutput
+                        </div>
                     }
-                }
+                </div>
 
                 @if (!string.IsNullOrEmpty(_validationMsg))
                 {
                     <p class="text-warning mt-2">@_validationMsg</p>
                 }
 
-                <button class="btn-fantasy mt-3" @onclick="SubmitAnswer" disabled="@_submitting">
-                    @(_submitting ? "Checking..." : "Submit Answer")
-                </button>
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn-fantasy" @onclick="SubmitAnswer" disabled="@_submitting">
+                        @(_submitting ? "Striking..." : $"⚔️ Execute {_selectedAction} & Submit")
+                    </button>
+                </div>
+            </div>
+        }
+        else if (_currentQuestion == null && !_showFeedback)
+        {
+            <div class="panel">
+                <p>No more questions available. The monster retreats!</p>
             </div>
         }
     }
@@ -234,6 +310,7 @@ else
     private Question? _currentQuestion;
     private GameService.AnswerResult? _lastResult;
     private string _answer = "";
+    private string _selectedAction = "Attack";
     private string _validationMsg = "";
     private bool _loading = true;
     private bool _submitting;
@@ -241,21 +318,28 @@ else
     private bool _noQuestions;
     private string _defeatReason = "";
     private Lesson? _nextLesson;
+    private bool _isDragon;
 
-    // WriteCode editor state
+    // Timers
+    private System.Threading.Timer? _timer;
+    private int _questionSecondsLeft = 60;
+    private TimeSpan _battleDuration = TimeSpan.Zero;
+    private DateTime _turnStartTime = DateTime.UtcNow;
+
+    // Monaco editor state
     private bool _editorInitialized = false;
     private bool _running = false;
     private string? _testOutput = null;
 
-    private int MonsterHpPercent => _battle == null || _challenge == null ? 0
-        : (int)((double)_battle.MonsterHpLeft / _challenge.MonsterHp * 100);
+    private int MonsterHpPercent => _battle == null || _challenge == null || _challenge.MonsterHp == 0 ? 0
+        : Math.Clamp((int)((double)_battle.MonsterHpLeft / _challenge.MonsterHp * 100), 0, 100);
 
-    private int PlayerHpPercent => _player == null ? 0
-        : (int)((double)_player.CurrentHp / _player.MaxHp * 100);
+    private int PlayerHpPercent => _player == null || _player.MaxHp == 0 ? 0
+        : Math.Clamp((int)((double)_player.CurrentHp / _player.MaxHp * 100), 0, 100);
 
-    // Sprite lookup: checks if the monster name CONTAINS a known keyword (case-insensitive).
-    // This means "Valley Slime", "Cave Slime" etc. all use slime.gif automatically.
-    // Add new sprite files to wwwroot/images/monsters/ and register their keyword here.
+    private int PlayerExpPercent => _player == null ? 0
+        : Math.Clamp((int)((double)_player.Xp / (_player.Level * 50) * 100), 0, 100);
+
     private static readonly (string keyword, string path)[] _spriteKeywords =
     {
         ("slime",        "/images/monsters/slime.gif"),
@@ -263,7 +347,7 @@ else
         ("troll",        "/images/monsters/stone-troll.gif"),
         ("specter",      "/images/monsters/echo-specter.gif"),
         ("wisp",         "/images/monsters/logic-wisp.gif"),
-        ("mimic",        "/images/monsters/cave-mimic.gif"),          // sprite pending upload
+        ("mimic",        "/images/monsters/cave-mimic.gif"),
         ("golem",        "/images/monsters/iron-golem.gif"),
         ("doppelganger", "/images/monsters/shadow-doppelganger.gif"),
         ("phantom",      "/images/monsters/twin-phantoms.gif"),
@@ -276,30 +360,87 @@ else
             .FirstOrDefault(s => _challenge.MonsterName.Contains(s.keyword, StringComparison.OrdinalIgnoreCase))
             .path;
 
+    private string GetHpClass(int percent) => percent switch
+    {
+        > 50 => "hp-high",
+        > 20 => "hp-mid",
+        _ => "hp-low"
+    };
+
+    private string FormatDuration(TimeSpan ts) => $"{(int)ts.TotalMinutes:00}:{ts.Seconds:00}";
+
+    private void SelectAction(string action)
+    {
+        _selectedAction = action;
+    }
+
+    private async Task SetChoiceAnswer(string letter)
+    {
+        _answer = letter;
+        if (_battle != null)
+        {
+            try
+            {
+                await JS.InvokeVoidAsync("monacoInterop.setValue", $"monaco-editor-{_battle.Id}", $"// Selected Answer Option: {letter}\nConsole.WriteLine(\"{letter}\");");
+            }
+            catch { }
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         _player = await GameSvc.GetCurrentPlayerAsync();
-
         if (_player == null) { _loading = false; return; }
 
         _challenge = await Db.Challenges.FindAsync(ChallengeId);
         _battle = await GameSvc.StartOrResumeBattleAsync(ChallengeId, _player.Id);
 
-        if (_battle.Status == BattleStatus.InProgress)
-            await LoadQuestion();
+        _isDragon = _challenge != null && (_challenge.IsBoss || _challenge.MonsterName.Contains("dragon", StringComparison.OrdinalIgnoreCase));
 
-        // If battle is already won, pre-load the next lesson
+        if (_battle.Status == BattleStatus.InProgress)
+        {
+            await LoadQuestion();
+            StartTimers();
+        }
+
         if (_battle.Status == BattleStatus.Won && _challenge != null)
             await LoadNextLessonAsync();
 
         _loading = false;
     }
 
+    private void StartTimers()
+    {
+        _questionSecondsLeft = 60;
+        _turnStartTime = DateTime.UtcNow;
+        _timer?.Dispose();
+        _timer = new System.Threading.Timer(async _ =>
+        {
+            await InvokeAsync(async () =>
+            {
+                if (_battle == null || _battle.Status != BattleStatus.Won && _battle.Status != BattleStatus.Lost)
+                {
+                    _battleDuration = DateTime.UtcNow - _battle!.StartedAt;
+                    if (!_showFeedback && _questionSecondsLeft > 0)
+                    {
+                        _questionSecondsLeft--;
+                        if (_questionSecondsLeft <= 0)
+                        {
+                            // Question timeout penalty!
+                            _answer = "TIMEOUT_EXPIRED";
+                            await SubmitAnswer();
+                        }
+                    }
+                    StateHasChanged();
+                }
+            });
+        }, null, 1000, 1000);
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            // Preload all battle sound effects
             await JS.InvokeVoidAsync("soundInterop.preload", "battle-start",    "/sounds/battle-start.mp3");
             await JS.InvokeVoidAsync("soundInterop.preload", "answer-correct",  "/sounds/answer-correct.mp3");
             await JS.InvokeVoidAsync("soundInterop.preload", "answer-wrong",    "/sounds/answer-wrong.mp3");
@@ -309,25 +450,37 @@ else
             await JS.InvokeVoidAsync("soundInterop.preload", "player-defeat",   "/sounds/player-defeat.mp3");
             await JS.InvokeVoidAsync("soundInterop.preload", "level-up",        "/sounds/level-up.mp3");
 
-            // Start battle theme music
             await JS.InvokeVoidAsync("soundInterop.startTheme", "/sounds/battle-theme.mp3");
-
-            // Play battle-start one-shot
             await JS.InvokeVoidAsync("soundInterop.play", "battle-start");
         }
 
-        // Initialize Monaco editor when a WriteCode question is displayed
-        if (_currentQuestion?.Type == ChallengeType.WriteCode
-            && _battle != null
-            && !_editorInitialized)
+        // Initialize Monaco editor for ALL challenges
+        if (_currentQuestion != null && _battle != null && !_editorInitialized && !_showFeedback)
         {
             _editorInitialized = true;
-            var starter = _currentQuestion.StarterCode ?? "// Write your solution here\n";
-            await JS.InvokeVoidAsync(
-                "monacoInterop.init",
-                $"monaco-editor-{_battle.Id}",
-                "csharp",
-                starter);
+            string starter;
+            if (!string.IsNullOrWhiteSpace(_currentQuestion.StarterCode))
+            {
+                starter = _currentQuestion.StarterCode;
+            }
+            else if (_currentQuestion.Type == ChallengeType.MultipleChoice)
+            {
+                starter = "// Choose A, B, C, or D\nConsole.WriteLine(\"A\");\n";
+            }
+            else if (_currentQuestion.Type == ChallengeType.PredictOutput)
+            {
+                starter = "// Predict output and print it below:\nConsole.WriteLine(\"...\");\n";
+            }
+            else
+            {
+                starter = "// Write your C# code here\n";
+            }
+
+            try
+            {
+                await JS.InvokeVoidAsync("monacoInterop.init", $"monaco-editor-{_battle.Id}", "csharp", starter);
+            }
+            catch { }
         }
     }
 
@@ -337,11 +490,15 @@ else
         _currentQuestion = result.Question;
         _noQuestions = result.NoQuestionsLeft;
 
-        // Refresh battle status if monster retreated
         if (_noQuestions)
         {
             _battle = await Db.Battles.FindAsync(_battle!.Id) ?? _battle;
             _defeatReason = "retreat";
+        }
+        else
+        {
+            _questionSecondsLeft = 60;
+            _editorInitialized = false;
         }
     }
 
@@ -353,12 +510,11 @@ else
         _lastResult = null;
         _editorInitialized = false;
         _testOutput = null;
+        _questionSecondsLeft = 60;
 
-        // Refresh player HP
         if (_player != null)
             _player = await Db.Players.FindAsync(_player.Id) ?? _player;
 
-        // Refresh battle
         _battle = await Db.Battles.FindAsync(_battle!.Id) ?? _battle;
 
         if (_battle.Status == BattleStatus.InProgress)
@@ -369,26 +525,29 @@ else
     {
         if (_submitting || _player == null || _battle == null) return;
 
-        // Capture editor value for WriteCode questions before validation
-        if (_currentQuestion?.Type == ChallengeType.WriteCode)
+        // Extract code from Monaco editor
+        try
         {
-            _answer = await JS.InvokeAsync<string>(
-                "monacoInterop.getValue",
-                $"monaco-editor-{_battle.Id}");
+            var editorCode = await JS.InvokeAsync<string>("monacoInterop.getValue", $"monaco-editor-{_battle.Id}");
+            if (!string.IsNullOrWhiteSpace(editorCode))
+            {
+                _answer = editorCode;
+            }
         }
+        catch { }
 
         if (string.IsNullOrWhiteSpace(_answer))
         {
-            _validationMsg = "Please select or enter an answer.";
+            _validationMsg = "Please write or enter your solution before submitting.";
             return;
         }
+
         _validationMsg = "";
         _submitting = true;
 
-        _lastResult = await GameSvc.SubmitAnswerAsync(_battle.Id, _player.Id, _answer);
+        _lastResult = await GameSvc.SubmitAnswerAsync(_battle.Id, _player.Id, _answer, _selectedAction);
         _showFeedback = true;
 
-        // Play answer sound effects
         if (_lastResult.IsCorrect)
         {
             await JS.InvokeVoidAsync("soundInterop.play", "answer-correct");
@@ -400,13 +559,12 @@ else
             await JS.InvokeVoidAsync("soundInterop.play", "player-hit");
         }
 
-        // Refresh battle and player from DB for latest HP values
         _battle = await Db.Battles.FindAsync(_battle.Id) ?? _battle;
         _player = await Db.Players.FindAsync(_player.Id) ?? _player;
 
-        // Load next lesson when battle is won, for the victory screen
         if (_battle.Status == BattleStatus.Won && _challenge != null)
         {
+            _timer?.Dispose();
             await LoadNextLessonAsync();
             await JS.InvokeVoidAsync("soundInterop.stopTheme");
             await JS.InvokeVoidAsync("soundInterop.play", "monster-defeat");
@@ -414,9 +572,9 @@ else
                 await JS.InvokeVoidAsync("soundInterop.play", "level-up");
         }
 
-        // Set defeat reason when battle is lost
         if (_battle.Status == BattleStatus.Lost)
         {
+            _timer?.Dispose();
             _defeatReason = _lastResult.DefeatReason == "retreat" ? "retreat" : "";
             await JS.InvokeVoidAsync("soundInterop.stopTheme");
             await JS.InvokeVoidAsync("soundInterop.play", "player-defeat");
@@ -425,10 +583,6 @@ else
         _submitting = false;
     }
 
-    /// <summary>
-    /// Finds the lesson that follows the one paired with this challenge.
-    /// Called when a battle is won to populate the victory screen's "Next Lesson" link.
-    /// </summary>
     private async Task LoadNextLessonAsync()
     {
         if (_challenge == null) return;
@@ -448,14 +602,9 @@ else
     private void TryAgain()
     {
         _defeatReason = "";
-        // forceLoad: true creates a fresh circuit and starts a new battle
         Nav.NavigateTo($"/battle/{ChallengeId}", forceLoad: true);
     }
 
-    /// <summary>
-    /// Runs the current code against question test cases WITHOUT submitting.
-    /// Lets students test their code before committing to an answer.
-    /// </summary>
     private async Task RunCodeTests()
     {
         if (_running || _battle == null || _currentQuestion == null) return;
@@ -465,20 +614,14 @@ else
 
         try
         {
-            // Capture current editor content
-            var code = await JS.InvokeAsync<string>(
-                "monacoInterop.getValue",
-                $"monaco-editor-{_battle.Id}");
-
+            var code = await JS.InvokeAsync<string>("monacoInterop.getValue", $"monaco-editor-{_battle.Id}");
             if (string.IsNullOrWhiteSpace(code))
             {
-                _testOutput = "No code to run.";
+                _testOutput = "No code in editor to execute.";
                 return;
             }
 
-            // Run against test cases via GameService
-            var results = await GameSvc.RunCodeTestsAsync(
-                _currentQuestion.Id, code);
+            var results = await GameSvc.RunCodeTestsAsync(_currentQuestion.Id, code);
             _testOutput = results;
         }
         finally
@@ -488,7 +631,6 @@ else
         }
     }
 
-    /// <summary>Returns the available choices for a multiple-choice question.</summary>
     private IEnumerable<(string Letter, string Text)> GetChoices()
     {
         if (_currentQuestion == null) yield break;
@@ -500,13 +642,13 @@ else
 
     public async ValueTask DisposeAsync()
     {
-        // Stop battle music when navigating away
+        _timer?.Dispose();
         try { await JS.InvokeVoidAsync("soundInterop.stopTheme"); } catch { }
 
-        if (_battle != null && _currentQuestion?.Type == ChallengeType.WriteCode)
+        if (_battle != null)
         {
             try { await JS.InvokeVoidAsync("monacoInterop.dispose", $"monaco-editor-{_battle.Id}"); }
-            catch { /* ignore disposal errors */ }
+            catch { }
         }
     }
 }

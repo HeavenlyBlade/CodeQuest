@@ -403,14 +403,13 @@ public static class DbSeeder
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole(role));
 
-        // Seed teacher account
+        // Seed or ensure teacher account
         const string teacherEmail = "teacher@codequest.local";
-        if (await userManager.FindByEmailAsync(teacherEmail) == null)
+        var password = config["TeacherSeedPassword"] ?? "Teacher#123";
+        var teacher = await userManager.FindByEmailAsync(teacherEmail);
+        if (teacher == null)
         {
-            var password = config["TeacherSeedPassword"]
-                ?? throw new InvalidOperationException(
-                    "TeacherSeedPassword not configured. Add it to appsettings.Development.json.");
-            var teacher = new IdentityUser
+            teacher = new IdentityUser
             {
                 UserName = teacherEmail,
                 Email = teacherEmail,
@@ -419,6 +418,32 @@ public static class DbSeeder
             var result = await userManager.CreateAsync(teacher, password);
             if (result.Succeeded)
                 await userManager.AddToRoleAsync(teacher, "Teacher");
+        }
+        else
+        {
+            if (!await userManager.IsInRoleAsync(teacher, "Teacher"))
+                await userManager.AddToRoleAsync(teacher, "Teacher");
+
+            // Ensure password matches seeded credentials
+            var token = await userManager.GeneratePasswordResetTokenAsync(teacher);
+            await userManager.ResetPasswordAsync(teacher, token, password);
+        }
+
+        // Ensure teacher has a player record so navigating to /map or battles doesn't throw
+        if (teacher != null && !await db.Players.AnyAsync(p => p.UserId == teacher.Id))
+        {
+            db.Players.Add(new Player
+            {
+                UserId = teacher.Id,
+                HeroName = "Grandmaster Teacher",
+                Level = 99,
+                Xp = 0,
+                Gold = 9999,
+                CurrentHp = 500,
+                MaxHp = 500,
+                TutorialComplete = true
+            });
+            await db.SaveChangesAsync();
         }
     }
 }

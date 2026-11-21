@@ -6,17 +6,17 @@
 
 <PageTitle>Leaderboard – CodeQuest</PageTitle>
 
-<div class="panel">
-    <h2>Leaderboard</h2>
-    <p class="muted-text mb-3">Top 10 heroes ranked by level and experience</p>
+<div class="panel animate-fade-in-up">
+    <h2>Hall of Heroes</h2>
+    <p class="muted-text mb-3">Ranked by level, experience, and battle speed</p>
 
     @if (_loading)
     {
-        <p>Loading...</p>
+        <p>Loading leaderboard...</p>
     }
-    else if (!_players.Any())
+    else if (!_entries.Any())
     {
-        <p>No heroes yet. Be the first!</p>
+        <p>No heroes yet. Be the first to conquer the realm!</p>
     }
     else
     {
@@ -29,24 +29,26 @@
                     <th>Level</th>
                     <th>XP</th>
                     <th>Gold</th>
+                    <th>Battles Won</th>
+                    <th>Fastest Clear</th>
                 </tr>
             </thead>
             <tbody>
-                @for (int i = 0; i < _players.Count; i++)
+                @foreach (var entry in _entries)
                 {
-                    var p = _players[i];
-                    int rank = i + 1;
                     <tr>
                         <td>
-                            @if (rank == 1) { <span class="rank-gold">1</span> }
-                            else if (rank == 2) { <span class="rank-silver">2</span> }
-                            else if (rank == 3) { <span class="rank-bronze">3</span> }
-                            else { @rank }
+                            @if (entry.Rank == 1) { <span class="rank-gold">1 👑</span> }
+                            else if (entry.Rank == 2) { <span class="rank-silver">2 🥈</span> }
+                            else if (entry.Rank == 3) { <span class="rank-bronze">3 🥉</span> }
+                            else { @entry.Rank }
                         </td>
-                        <td>@p.HeroName</td>
-                        <td>@p.Level</td>
-                        <td>@p.Xp</td>
-                        <td class="gold-text">@p.Gold gold</td>
+                        <td><strong>@entry.HeroName</strong></td>
+                        <td>Lv. @entry.Level</td>
+                        <td>@entry.Xp XP</td>
+                        <td class="gold-text">@entry.Gold gold</td>
+                        <td>@entry.BattlesWon ⚔️</td>
+                        <td style="color:var(--color-teal);font-family:monospace;">@entry.FastestClear</td>
                     </tr>
                 }
             </tbody>
@@ -58,16 +60,53 @@
 </div>
 
 @code {
-    private List<Player> _players = new();
+    private record LeaderboardEntry(
+        int Rank,
+        string HeroName,
+        int Level,
+        int Xp,
+        int Gold,
+        int BattlesWon,
+        string FastestClear
+    );
+
+    private List<LeaderboardEntry> _entries = new();
     private bool _loading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        _players = await Db.Players
+        var topPlayers = await Db.Players
             .OrderByDescending(p => p.Level)
             .ThenByDescending(p => p.Xp)
             .Take(10)
             .ToListAsync();
+
+        var playerIds = topPlayers.Select(p => p.Id).ToList();
+
+        var wonBattles = await Db.Battles
+            .Where(b => playerIds.Contains(b.PlayerId) && b.Status == BattleStatus.Won && b.Attempts.Any())
+            .Select(b => new {
+                b.PlayerId,
+                b.StartedAt,
+                FinishedAt = b.Attempts.Max(a => a.AttemptedAt)
+            })
+            .ToListAsync();
+
+        _entries = new();
+        for (int i = 0; i < topPlayers.Count; i++)
+        {
+            var p = topPlayers[i];
+            var pBattles = wonBattles.Where(b => b.PlayerId == p.Id).ToList();
+            int wonCount = pBattles.Count;
+            string fastest = "--";
+            if (wonCount > 0)
+            {
+                var shortest = pBattles.Min(b => Math.Max(1, (int)(b.FinishedAt - b.StartedAt).TotalSeconds));
+                fastest = $"{shortest}s";
+            }
+            _entries.Add(new LeaderboardEntry(i + 1, p.HeroName, p.Level, p.Xp, p.Gold, wonCount, fastest));
+        }
+
         _loading = false;
     }
 }

@@ -151,7 +151,7 @@
     {
         var q = Db.Challenges.AsQueryable();
         if (_filterZoneId > 0) q = q.Where(c => c.ZoneId == _filterZoneId);
-        _monsters = await q.OrderBy(c => c.ZoneId).ThenBy(c => c.OrderNumber).ToListAsync();
+        _monsters = await q.OrderBy(c => c.ZoneId).ThenByDescending(c => c.OrderNumber).ToListAsync();
     }
 
     private async Task OnZoneChanged(ChangeEventArgs e)

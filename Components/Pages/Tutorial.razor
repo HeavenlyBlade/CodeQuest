@@ -130,9 +130,9 @@
     <div class="d-flex justify-content-between align-items-center mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
         @if (_step > 1)
         {
-            <button type="button" class="btn-secondary-fantasy" @onclick="Back">
+            <a href="/tutorial?step=@(_step - 1)" class="btn-secondary-fantasy" @onclick="Back" @onclick:preventDefault="false">
                 &larr; Back
-            </button>
+            </a>
         }
         else
         {
@@ -143,40 +143,53 @@
             @for (int i = 1; i <= TotalSteps; i++)
             {
                 var stepNum = i;
-                <span class="cq-step-dot"
-                      style="display:inline-block;width:10px;height:10px;border-radius:50%;background:@(_step == stepNum ? "var(--color-accent)" : "rgba(255,255,255,0.15)");margin:0 3px;cursor:pointer;"
-                      @onclick="() => SetStep(stepNum)"></span>
+                <a href="/tutorial?step=@stepNum"
+                   class="cq-step-dot"
+                   style="display:inline-block;width:12px;height:12px;border-radius:50%;background:@(_step == stepNum ? "var(--color-accent)" : "rgba(255,255,255,0.2)");margin:0 4px;cursor:pointer;text-decoration:none;"
+                   @onclick="() => SetStep(stepNum)"
+                   @onclick:preventDefault="false"></a>
             }
         </div>
 
         <div>
             @if (_step < TotalSteps)
             {
-                <button type="button" class="btn-fantasy" @onclick="Next">
+                <a href="/tutorial?step=@(_step + 1)" class="btn-fantasy" @onclick="Next" @onclick:preventDefault="false">
                     Next &rarr;
-                </button>
+                </a>
             }
             else
             {
-                <button type="button" class="btn-fantasy" @onclick="FinishTutorial" disabled="@_saving">
-                    @(_saving ? "Entering Map..." : "Start Your Quest!")
-                </button>
+                <a href="/map?skip=1" class="btn-fantasy" @onclick="FinishTutorial" @onclick:preventDefault="false">
+                    Start Your Quest!
+                </a>
             }
         </div>
     </div>
 
     <div class="text-center mt-3">
-        <a href="/map?skip=1" @onclick="FinishTutorial" class="text-muted" style="font-size:0.85rem;text-decoration:underline;">
+        <a href="/map?skip=1" @onclick="FinishTutorial" @onclick:preventDefault="false" class="text-muted" style="font-size:0.85rem;text-decoration:underline;">
             Skip tutorial and enter World Map &rarr;
         </a>
     </div>
 </div>
 
 @code {
+    [SupplyParameterFromQuery]
+    public int? Step { get; set; }
+
     private int _step = 1;
     private const int TotalSteps = 5;
     private Player? _player;
     private bool _saving = false;
+
+    protected override void OnParametersSet()
+    {
+        if (Step.HasValue && Step.Value >= 1 && Step.Value <= TotalSteps)
+        {
+            _step = Step.Value;
+        }
+    }
 
     private void Next()
     {
@@ -208,18 +221,20 @@
     protected override async Task OnInitializedAsync()
     {
         _player = await GameSvc.GetCurrentPlayerAsync();
+        if (Step.HasValue && Step.Value >= 1 && Step.Value <= TotalSteps)
+        {
+            _step = Step.Value;
+        }
     }
 
     private async Task FinishTutorial()
     {
         if (_saving) return;
         _saving = true;
-        StateHasChanged();
 
         try
         {
             _player ??= await GameSvc.GetCurrentPlayerAsync();
-
             if (_player != null)
             {
                 await GameSvc.CompleteTutorialAsync(_player.Id);

@@ -7,10 +7,12 @@ namespace CodeQuest.Pages;
 public class LoginModel : PageModel
 {
     private readonly SignInManager<IdentityUser> _signInManager;
+    private readonly UserManager<IdentityUser> _userManager;
 
-    public LoginModel(SignInManager<IdentityUser> signInManager)
+    public LoginModel(SignInManager<IdentityUser> signInManager, UserManager<IdentityUser> userManager)
     {
         _signInManager = signInManager;
+        _userManager = userManager;
     }
 
     [BindProperty] public string Email { get; set; } = string.Empty;
@@ -19,7 +21,7 @@ public class LoginModel : PageModel
 
     public void OnGet() { }
 
-    public async Task<IActionResult> OnPostAsync()
+    public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
         if (!ModelState.IsValid) return Page();
 
@@ -27,7 +29,18 @@ public class LoginModel : PageModel
             Email, Password, isPersistent: false, lockoutOnFailure: false);
 
         if (result.Succeeded)
+        {
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+
+            var user = await _userManager.FindByEmailAsync(Email);
+            if (user != null && await _userManager.IsInRoleAsync(user, "Teacher"))
+            {
+                return LocalRedirect("/teacher/zones");
+            }
+
             return LocalRedirect("/map");
+        }
 
         ErrorMessage = "Invalid email or password.";
         return Page();
