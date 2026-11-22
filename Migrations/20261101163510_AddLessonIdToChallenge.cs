@@ -19,11 +19,13 @@ namespace CodeQuest.Migrations
             // Wire existing seeded challenges to their paired lessons by matching OrderNumber within the zone.
             // This runs once on existing databases that were seeded before this migration.
             migrationBuilder.Sql(@"
-                UPDATE ""Challenges"" c
-                SET ""LessonId"" = l.""Id""
-                FROM ""Lessons"" l
-                WHERE l.""ZoneId"" = c.""ZoneId""
-                  AND l.""OrderNumber"" = c.""OrderNumber""
+                UPDATE ""Challenges""
+                SET ""LessonId"" = (
+                    SELECT l.""Id""
+                    FROM ""Lessons"" l
+                    WHERE l.""ZoneId"" = ""Challenges"".""ZoneId""
+                      AND l.""OrderNumber"" = ""Challenges"".""OrderNumber""
+                );
             ");
 
             migrationBuilder.CreateIndex(
