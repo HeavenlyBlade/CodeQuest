@@ -12,6 +12,10 @@
     <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
 </div>
 
+@if (_loading) { <div class="panel text-center py-4"><p class="muted-text">Loading zones...</p></div> }
+else
+{
+
 @if (!string.IsNullOrEmpty(_statusMsg))
 {
     <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
@@ -69,12 +73,14 @@
             </div>
         }
     </div>
-}
+} @* end zone list *@
+} @* end else (_loading) *@
 
 @code {
     private List<Zone> _zones = new();
     private string _statusMsg = "";
     private bool _isError;
+    private bool _loading = true;
 
     // New zone form
     private string _newName = "";
@@ -91,7 +97,9 @@
 
     private async Task LoadZones()
     {
+        _loading = true;
         _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
+        _loading = false;
     }
 
     private async Task CreateZone()

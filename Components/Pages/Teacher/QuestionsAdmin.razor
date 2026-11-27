@@ -13,6 +13,13 @@
     <a href="/map" class="btn btn-outline-secondary btn-sm">← Back to Map</a>
 </div>
 
+@if (_loading)
+{
+    <div class="panel text-center py-4"><p class="muted-text">Loading questions...</p></div>
+}
+else
+{
+
 @if (!string.IsNullOrEmpty(_statusMsg))
 {
     <div class="alert @(_isError ? "alert-danger" : "alert-success")">@_statusMsg</div>
@@ -91,7 +98,7 @@
         {
             <div class="mb-3">
                 <label class="form-label fw-bold">Starter Code</label>
-                <small class="d-block text-muted mb-1">Pre-filled code scaffold shown in the Monaco editor to students.</small>
+                <small class="d-block text-muted mb-1">Pre-filled code scaffold shown in Monaco editor to students.</small>
                 <textarea class="form-control font-monospace" rows="6"
                           @bind="_newStarterCode"
                           placeholder="// Write your starter code here..."></textarea>
@@ -121,8 +128,6 @@
                 }
                 <button class="btn btn-sm btn-outline-secondary" @onclick="AddTestCase">+ Add Test Case</button>
             </div>
-            @* Correct answer is determined by test cases — store a placeholder *@
-            @* No CorrectAnswer input shown for WriteCode *@
         }
         <div class="col-12">
             <button class="btn-fantasy" @onclick="CreateQuestion">Add Question</button>
@@ -144,7 +149,6 @@
                 }
                 else if (q.Type == ChallengeType.WriteCode)
                 {
-                    @* Show test case count instead of answer *@
                     <span class="text-muted small">@(GetTestCaseCount(q)) test cases</span>
                 }
                 else
@@ -163,6 +167,8 @@
     </div>
 }
 
+} @* end else (_loading) *@
+
 @code {
     private List<Zone> _zones = new();
     private List<Challenge> _allMonsters = new();
@@ -172,8 +178,9 @@
     private string _filterDiff = "";
     private string _statusMsg = "";
     private bool _isError;
+    private bool _loading = true;
 
-    // New question
+    // New question form fields
     private int _newZoneId;
     private Difficulty _newDiff = Difficulty.Easy;
     private ChallengeType _newType = ChallengeType.MultipleChoice;
@@ -197,7 +204,8 @@
         _zones = await Db.Zones.OrderBy(z => z.OrderNumber).ToListAsync();
         _allMonsters = await Db.Challenges.OrderByDescending(c => c.OrderNumber).ToListAsync();
         await LoadQuestions();
-        BuildWarnings();
+        await BuildWarningsAsync();
+        _loading = false;
     }
 
     private async Task LoadQuestions()
@@ -209,12 +217,12 @@
         _questions = await q.OrderBy(x => x.ZoneId).ThenBy(x => x.Difficulty).ToListAsync();
     }
 
-    private void BuildWarnings()
+    private async Task BuildWarningsAsync()
     {
         _warnings = new();
         foreach (var monster in _allMonsters)
         {
-            int activeCount = Db.Questions.Count(q =>
+            int activeCount = await Db.Questions.CountAsync(q =>
                 q.ZoneId == monster.ZoneId && q.Difficulty == monster.Difficulty && q.IsActive);
             int needed = monster.QuestionsToDefeat + 3;
             if (activeCount < needed)
@@ -267,7 +275,7 @@
             question.StarterCode = _newStarterCode;
             question.TestCasesJson = System.Text.Json.JsonSerializer.Serialize(
                 _newTestCases.Select(t => new TestCase(t.Input, t.ExpectedOutput)).ToList());
-            question.CorrectAnswer = "(evaluated by test cases)"; // placeholder
+            question.CorrectAnswer = "(evaluated by test cases)";
         }
         else if (string.IsNullOrWhiteSpace(_newCorrect))
         {
@@ -277,11 +285,13 @@
 
         Db.Questions.Add(question);
         await Db.SaveChangesAsync();
+
         _newText = ""; _newA = ""; _newB = ""; _newC = ""; _newD = ""; _newCorrect = "";
         _newStarterCode = string.Empty;
         _newTestCases = new();
+
         await LoadQuestions();
-        BuildWarnings();
+        await BuildWarningsAsync();
         ShowMsg("Question created.");
     }
 
@@ -289,7 +299,7 @@
     {
         q.IsActive = !q.IsActive;
         await Db.SaveChangesAsync();
-        BuildWarnings();
+        await BuildWarningsAsync();
         ShowMsg(q.IsActive ? "Question activated." : "Question deactivated.");
     }
 
@@ -304,19 +314,24 @@
         Db.Questions.Remove(q);
         await Db.SaveChangesAsync();
         await LoadQuestions();
-        BuildWarnings();
+        await BuildWarningsAsync();
         ShowMsg("Question deleted.");
     }
 
     private int GetTestCaseCount(Question q)
     {
         if (string.IsNullOrWhiteSpace(q.TestCasesJson)) return 0;
-        try {
+        try
+        {
             var list = System.Text.Json.JsonSerializer.Deserialize<List<TestCase>>(q.TestCasesJson);
             return list?.Count ?? 0;
         }
         catch { return 0; }
     }
 
-    private void ShowMsg(string msg, bool isError = false) { _statusMsg = msg; _isError = isError; }
+    private void ShowMsg(string msg, bool isError = false)
+    {
+        _statusMsg = msg;
+        _isError = isError;
+    }
 }

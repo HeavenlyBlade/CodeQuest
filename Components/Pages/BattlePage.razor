@@ -4,7 +4,6 @@
 @implements IAsyncDisposable
 @inject GameService GameSvc
 @inject NavigationManager Nav
-@inject IHttpContextAccessor HttpContextAccessor
 @inject IJSRuntime JS
 @using CodeQuest.Data
 @inject GameDbContext Db
@@ -54,6 +53,14 @@ else
             @if (_nextLesson != null)
             {
                 <a href="/lesson/@_nextLesson.Id" class="btn-fantasy mt-2">Next: @_nextLesson.Title</a>
+            }
+            else
+            {
+                <div class="p-3 my-3 rounded" style="background:rgba(78,205,196,0.1);border:1px solid rgba(78,205,196,0.3);max-width:400px;margin:0 auto;">
+                    <div class="teal-text fw-bold fs-5">Zone Complete!</div>
+                    <div class="text-muted small mt-1">You've conquered every challenge in this zone.</div>
+                </div>
+                <a href="/map" class="btn-fantasy mt-2">Return to World Map</a>
             }
             <a href="/zone/@(_challenge?.ZoneId)" class="btn btn-outline-secondary ms-2 mt-2">Back to Zone</a>
         </div>
@@ -263,14 +270,23 @@ else
                 <div class="mt-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="small text-muted">C# Code Workspace:</span>
-                        <button class="btn btn-sm btn-outline-info" @onclick="RunCodeTests" disabled="@_running">
+                        <button class="btn btn-sm btn-outline-info" @onclick="RunCodeTests" disabled="@(_running || _monacoFailed)">
                             @(_running ? "Running…" : "▶ Run Code")
                         </button>
                     </div>
 
-                    <div id="monaco-editor-@_battle.Id"
-                         style="height:260px; border:1px solid #444; border-radius:6px; margin-bottom:0.5rem;">
-                    </div>
+                    @if (_monacoFailed)
+                    {
+                        <div class="alert alert-warning py-1 px-2 small mb-1">Code editor unavailable (CDN unreachable). Type your answer below.</div>
+                        <textarea class="form-control font-monospace" rows="8" style="background:#1e1e1e;color:#d4d4d4;border-color:#444;"
+                                  @bind="_answer" placeholder="// Write your C# code here"></textarea>
+                    }
+                    else
+                    {
+                        <div id="monaco-editor-@_battle.Id"
+                             style="height:260px; border:1px solid #444; border-radius:6px; margin-bottom:0.5rem;">
+                        </div>
+                    }
 
                     @if (_testOutput is not null)
                     {
@@ -328,6 +344,7 @@ else
 
     // Monaco editor state
     private bool _editorInitialized = false;
+    private bool _monacoFailed = false;
     private bool _running = false;
     private string? _testOutput = null;
 
@@ -479,8 +496,13 @@ else
             try
             {
                 await JS.InvokeVoidAsync("monacoInterop.init", $"monaco-editor-{_battle.Id}", "csharp", starter);
+                // Check if Monaco CDN failed to load
+                _monacoFailed = await JS.InvokeAsync<bool>("(() => window.monacoInterop?.failed ?? false)");
             }
-            catch { }
+            catch
+            {
+                _monacoFailed = true;
+            }
         }
     }
 

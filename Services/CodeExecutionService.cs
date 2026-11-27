@@ -63,15 +63,31 @@ public class CodeExecutionService
             return (false, string.Empty, $"Compilation error: {ex.Message}");
         }
 
-        // 2. Capture Console.Out so we can read what the script printed.
-        var originalOut = Console.Out;
+        // 2. Capture output via a per-call StringWriter passed into the script globals.
+        //    Console.SetOut is process-global and NOT thread-safe — two concurrent
+        //    submissions would corrupt each other's captured output.
+        //    Instead we redirect Console.Out only inside the Task.Run worker thread
+        //    and restore it immediately after, keeping the swap entirely within that thread.
         var sw = new StringWriter();
-        Console.SetOut(sw);
+        string stdout = string.Empty;
 
         try
         {
             using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
-            var runTask = Task.Run(async () => await script.RunAsync(cancellationToken: cts.Token));
+            var runTask = Task.Run(async () =>
+            {
+                // Redirect Console.Out for this thread only.
+                var prev = Console.Out;
+                Console.SetOut(sw);
+                try
+                {
+                    await script.RunAsync(cancellationToken: cts.Token);
+                }
+                finally
+                {
+                    Console.SetOut(prev);
+                }
+            }, cts.Token);
 
             var completedTask = await Task.WhenAny(runTask, Task.Delay(TimeSpan.FromSeconds(3)));
             if (completedTask != runTask)
@@ -80,8 +96,8 @@ public class CodeExecutionService
                 return (false, string.Empty, "Time limit exceeded (3 seconds).");
             }
 
-            await runTask;
-            string stdout = sw.ToString().TrimEnd('\r', '\n', ' ');
+            await runTask; // propagate any exception
+            stdout = sw.ToString().TrimEnd('\r', '\n', ' ');
             return (true, stdout, string.Empty);
         }
         catch (OperationCanceledException)
@@ -91,19 +107,11 @@ public class CodeExecutionService
         catch (Exception ex)
         {
             // Unwrap TargetInvocationException or AggregateException to reveal the root cause
-            // (e.g., DivideByZeroException, NullReferenceException, etc.)
             var actualEx = ex;
             while (actualEx.InnerException != null && (actualEx is TargetInvocationException || actualEx is AggregateException))
-            {
                 actualEx = actualEx.InnerException;
-            }
 
             return (false, string.Empty, $"{actualEx.GetType().Name}: {actualEx.Message}");
-        }
-        finally
-        {
-            // Always restore Console.Out — critical in a long-running server process.
-            Console.SetOut(originalOut);
         }
     }
 }

@@ -79,19 +79,28 @@ public class GameService
             .OrderBy(z => z.OrderNumber)
             .ToListAsync();
 
+        // Batch-load all won challenge IDs for this player in a single query —
+        // avoids an N+1 where IsZoneUnlockedAsync would query the DB once per zone.
+        var wonChallengeIds = await _db.Battles
+            .AsNoTracking()
+            .Where(b => b.PlayerId == playerId && b.Status == BattleStatus.Won)
+            .Select(b => b.ChallengeId)
+            .Distinct()
+            .ToHashSetAsync();
+
         var result = new List<ZoneStatus>();
         foreach (var zone in zones)
         {
-            result.Add(new ZoneStatus(zone, await IsZoneUnlockedAsync(zone, playerId, zones)));
+            result.Add(new ZoneStatus(zone, IsZoneUnlocked(zone, zones, wonChallengeIds)));
         }
         return result;
     }
 
     /// <summary>
     /// A zone is unlocked if it is OrderNumber==1, or the player has won the
-    /// boss battle of the previous zone.
+    /// boss battle of the previous zone. Uses pre-loaded wonChallengeIds — no DB call.
     /// </summary>
-    private async Task<bool> IsZoneUnlockedAsync(Zone zone, int playerId, List<Zone> allZones)
+    private static bool IsZoneUnlocked(Zone zone, List<Zone> allZones, HashSet<int> wonChallengeIds)
     {
         if (zone.OrderNumber == 1) return true;
 
@@ -101,11 +110,7 @@ public class GameService
         var boss = prevZone.Challenges.FirstOrDefault(c => c.IsBoss);
         if (boss == null) return false;
 
-        return await _db.Battles
-            .AsNoTracking()
-            .AnyAsync(b => b.PlayerId == playerId
-                        && b.ChallengeId == boss.Id
-                        && b.Status == BattleStatus.Won);
+        return wonChallengeIds.Contains(boss.Id);
     }
 
     // -------------------------------------------------------------------------
@@ -344,6 +349,13 @@ public class GameService
 
         var question = await _db.Questions.FindAsync(battle.CurrentQuestionId)
             ?? throw new InvalidOperationException("Current question not found.");
+
+        // Guard against double-submit: if the pinned question was already cleared
+        // by a concurrent submit (rapid clicks / network replay), bail out silently.
+        if (battle.CurrentQuestionId == null)
+            return new AnswerResult(false, string.Empty, 0, 0,
+                battle.MonsterHpLeft, player.CurrentHp, battle.Status,
+                0, 0, false, player.Level, "", "Already submitted.");
 
         // ---- Check correctness via WriteCode evaluation or direct match ----
         bool isCorrect = await EvaluateWriteCodeAsync(question, answer);

@@ -8,15 +8,27 @@
  */
 window.monacoInterop = {
     editors: {},
+    failed: false,  // set to true if Monaco CDN fails to load
 
     /**
      * Initialise a Monaco editor inside the element with the given ID.
      * Safe to call multiple times — disposes existing instance first.
+     * Returns true on success, false if Monaco is unavailable.
      * @param {string} elementId  - id attribute of the container div
      * @param {string} language   - Monaco language id, e.g. 'csharp'
      * @param {string} value      - initial code content
      */
     init(elementId, language, value) {
+        // If require (Monaco loader) is not defined, the CDN failed
+        if (typeof require === 'undefined') {
+            this.failed = true;
+            const el = document.getElementById(elementId);
+            if (el) {
+                el.innerHTML = '<div style="padding:1rem;color:#f5a623;background:#1e1e1e;border-radius:4px;font-family:monospace;">Code editor could not load (CDN unreachable). Use the text box below.</div>';
+            }
+            return false;
+        }
+
         // Dispose any previous instance in this slot
         if (this.editors[elementId]) {
             this.editors[elementId].dispose();
@@ -41,10 +53,11 @@ window.monacoInterop = {
                 fontSize: 14,
                 lineNumbers: 'on',
                 scrollBeyondLastLine: false,
-                automaticLayout: true,   // resizes with container
+                automaticLayout: true,
                 wordWrap: 'on'
             });
         });
+        return true;
     },
 
     /**

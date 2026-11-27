@@ -8,7 +8,7 @@ services:
     plan: free
     region: oregon  # closest to PH is singapore but free tier only supports oregon/frankfurt
     branch: main
-    healthCheckPath: /
+    healthCheckPath: /health
     envVars:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production

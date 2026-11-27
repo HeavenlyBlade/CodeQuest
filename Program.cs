@@ -77,7 +77,8 @@ builder.Services.AddRazorPages();
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents(options =>
     {
-        options.DetailedErrors = true;
+        // Only expose internal exception details in Development — never in Production
+        options.DetailedErrors = builder.Environment.IsDevelopment();
     });
 
 var app = builder.Build();
@@ -121,7 +122,6 @@ if (app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-app.UseStaticFiles();
 app.MapStaticAssets();
 app.UseAuthentication();
 app.UseAuthorization();

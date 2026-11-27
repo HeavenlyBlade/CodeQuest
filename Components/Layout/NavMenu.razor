@@ -1,5 +1,6 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <div class="top-row ps-3 navbar navbar-dark" style="border-bottom: 1px solid rgba(233,69,96,0.25);">
     <div class="container-fluid d-flex align-items-center">
@@ -68,11 +69,9 @@
                 <div class="nav-item px-3 mt-2">
                     <button class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
                             style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--color-muted);"
-                            onclick="
-                                var muted = soundInterop.toggleMute();
-                                this.querySelector('.sound-label').textContent = muted ? 'Sound Off' : 'Sound On';
-                            ">
-                        <span>🔊</span> <span class="sound-label">Sound On</span>
+                            @onclick="ToggleMute">
+                        <span>@(_muted ? "🔇" : "🔊")</span>
+                        <span>@(_muted ? "Sound Off" : "Sound On")</span>
                     </button>
                 </div>
             </Authorized>
@@ -87,3 +86,24 @@
         </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    private bool _muted = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Sync initial mute state from localStorage (set by soundInterop)
+            try { _muted = await JS.InvokeAsync<bool>("(() => localStorage.getItem('cq-muted') === 'true')"); }
+            catch { }
+            StateHasChanged();
+        }
+    }
+
+    private async Task ToggleMute()
+    {
+        try { _muted = await JS.InvokeAsync<bool>("soundInterop.toggleMute"); }
+        catch { _muted = !_muted; }
+    }
+}
